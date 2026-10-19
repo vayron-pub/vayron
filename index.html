@@ -13,7 +13,7 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <!-- FontAwesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <!-- خطوط راقية -->
+  <!-- الخطوط -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@500;700;900&family=Tajawal:wght@300;400;500;700;800&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -63,7 +63,7 @@
         exploreBtn: "استكشف المكتبة",
         identityTitle: "VAYRON",
         identitySub: "ما وراء الظلال • دار النشر الرقمي",
-        identityP1: "فايرون (VAYRON) ليس مجرد علامة أدبية، بل هو الحد الفاصل بين الحقيقة الراسخة والوهم الخفي. تم تأسيس الدار لتكون المنصة الأولى المتخصصة في تقديم أدب نفسي مكثف، حيث الغموض لا يقتصر على حل لغز، بل يغوص في تعقيدات النفس البشرية.",
+        identityP1: "فايرون (VAYRON) ليس مجرد علامة أدبية، بل هو الحد الفاصل بين الحقيقة الراسخة والوهم الخفي. تم تأسيس الدار لتكون المنصة الأولى المتخصصة في تقديم أدب نفسي مكثف، حيث الغموض يغوص في تعقيدات النفس البشرية.",
         identityP2: "كل عمل يصدر تحت مظلة VAYRON يلتزم بميثاق سردي صارم: حبكات مشوقة، تصاعد درامي يحبس الأنفاس، ونهايات لا يمكن التنبؤ بها، مع خيارات قراءة واقتناء باللغتين العربية والإنجليزية.",
         feat1Title: "إثارة نفسية معمقة",
         feat1Desc: "روايات وقصص كُتبت بعناية لتأخذك إلى أروقة العقل الباطن ومتاهات الشك.",
@@ -117,7 +117,7 @@
         exploreBtn: "Explore Library",
         identityTitle: "VAYRON",
         identitySub: "BEYOND THE VEIL • EDITORIAL HOUSE",
-        identityP1: "VAYRON is not merely a publishing mark; it is the boundary dividing certainty from illusion. Founded to champion uncompromising psychological thrillers and dark investigative narratives that explore the deepest chambers of the human psyche.",
+        identityP1: "VAYRON is not merely a publishing mark; it is the boundary dividing certainty from illusion. Founded to champion uncompromising psychological thrillers and dark investigative narratives.",
         identityP2: "Every piece curated under VAYRON adheres to a rigorous literary canon: suffocating suspense, unpredictable revelations, available in dual Arabic and English editions.",
         feat1Title: "Deep Psychological Noir",
         feat1Desc: "Crafted narratives navigating the intricate labyrinth of human cognition and tension.",
@@ -208,18 +208,14 @@
       const [inputEmail, setInputEmail] = React.useState('');
       const [inputName, setInputName] = React.useState('');
 
-      // الكتب المخزنة
       const [books, setBooks] = React.useState(() => {
         const saved = localStorage.getItem('vayron_books');
         return saved ? JSON.parse(saved) : [];
       });
 
       const [selectedGenre, setSelectedGenre] = React.useState('all');
-      
-      // تفاصيل الشراء النشطة (الكتاب + النسخة المختارة)
       const [checkoutData, setCheckoutData] = React.useState(null);
 
-      // نموذج إضافة كتاب جديد
       const [newBook, setNewBook] = React.useState({
         titleAr: '',
         titleEn: '',
@@ -428,4 +424,519 @@
               {isAdmin && (
                 <button 
                   onClick={() => setView('admin')} 
-                  className
+                  className="text-amber-400 bg-amber-950/40 border border-amber-600/40 px-3 py-1 rounded text-xs flex items-center gap-1.5 hover:bg-amber-900/40 transition"
+                >
+                  <i className="fa-solid fa-shield-halved text-[11px]"></i>
+                  <span>لوحة الإدارة</span>
+                </button>
+              )}
+
+              {/* تحويل اللغة */}
+              <div className="flex items-center border border-stone-800 rounded-full p-0.5 bg-stone-900 text-xs">
+                <button 
+                  onClick={() => toggleLang('ar')}
+                  className={`px-2.5 py-1 rounded-full transition font-bold ${lang === 'ar' ? 'bg-amber-600 text-stone-950 shadow' : 'text-stone-400 hover:text-stone-200'}`}
+                >
+                  عربي
+                </button>
+                <button 
+                  onClick={() => toggleLang('en')}
+                  className={`px-2.5 py-1 rounded-full transition font-bold font-cinzel ${lang === 'en' ? 'bg-amber-600 text-stone-950 shadow' : 'text-stone-400 hover:text-stone-200'}`}
+                >
+                  EN
+                </button>
+              </div>
+
+              {/* حساب الزبون */}
+              {user ? (
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center gap-2 bg-stone-900 border border-stone-800 hover:border-amber-500/50 px-3 py-1.5 rounded-full transition text-xs"
+                  >
+                    <img src={user.avatar} alt={user.name} className="w-5 h-5 rounded-full ring-1 ring-amber-500/50" />
+                    <span className="max-w-[90px] truncate text-stone-200 font-medium">{user.name}</span>
+                    <i className="fa-solid fa-chevron-down text-[9px] text-stone-500"></i>
+                  </button>
+
+                  {showUserMenu && (
+                    <div className={`absolute ${lang === 'ar' ? 'left-0 text-right' : 'right-0 text-left'} mt-2 w-52 bg-stone-900 border border-stone-800 rounded-xl shadow-2xl py-2 z-50`}>
+                      <div className="px-4 py-2 border-b border-stone-800">
+                        <p className="text-xs font-bold text-stone-200">{user.name}</p>
+                        <p className="text-[11px] text-stone-500 truncate font-mono">{user.email}</p>
+                      </div>
+                      <button 
+                        onClick={() => { setView('books'); setShowUserMenu(false); }}
+                        className="w-full px-4 py-2 text-xs text-stone-300 hover:bg-stone-800 transition flex items-center gap-2"
+                      >
+                        <i className="fa-solid fa-book-bookmark text-amber-500"></i>
+                        <span>{t.navBooks}</span>
+                      </button>
+                      <button 
+                        onClick={handleLogout}
+                        className="w-full px-4 py-2 text-xs text-rose-400 hover:bg-stone-800 transition flex items-center gap-2"
+                      >
+                        <i className="fa-solid fa-arrow-right-from-bracket"></i>
+                        <span>{lang === 'ar' ? 'تسجيل الخروج' : 'Sign Out'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button 
+                  onClick={() => { setLoginReasonMsg(''); setShowGoogleModal(true); }}
+                  className="bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-300 text-xs px-3.5 py-1.5 rounded-full flex items-center gap-2 transition"
+                >
+                  <i className="fa-brands fa-google text-amber-500"></i>
+                  <span className="hidden sm:inline">{t.googleLogin}</span>
+                </button>
+              )}
+            </nav>
+          </header>
+
+          {/* محتوى الصفحات */}
+          <main className="flex-1 max-w-6xl mx-auto px-6 py-12 w-full">
+            
+            {/* الصفحة الرئيسية */}
+            {view === 'home' && (
+              <div className="space-y-20">
+                <div className="text-center space-y-6 max-w-3xl mx-auto pt-8">
+                  <div className="inline-flex items-center gap-2 border border-amber-500/20 bg-amber-950/20 px-4 py-1.5 rounded-full">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span className="text-xs uppercase tracking-widest text-amber-400 font-cinzel">{t.heroBadge}</span>
+                  </div>
+
+                  <h2 className="text-4xl sm:text-6xl font-bold leading-tight font-amiri text-stone-100">
+                    {t.heroTitle1} <br />
+                    <span className="text-amber-500">{t.heroTitle2}</span>
+                  </h2>
+
+                  <p className="text-stone-400 text-base sm:text-lg leading-relaxed font-light">
+                    {t.heroDesc}
+                  </p>
+
+                  <div className="pt-4 flex justify-center gap-4">
+                    <button 
+                      onClick={() => { setSelectedGenre('all'); setView('books'); }} 
+                      className="bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-amber-900/20 transition text-sm flex items-center gap-2"
+                    >
+                      <i className="fa-solid fa-book-open"></i>
+                      <span>{t.exploreBtn} ({books.length})</span>
+                    </button>
+                    {!user && (
+                      <button 
+                        onClick={() => { setLoginReasonMsg(''); setShowGoogleModal(true); }}
+                        className="bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-300 font-bold px-6 py-3.5 rounded-xl transition text-sm flex items-center gap-2"
+                      >
+                        <i className="fa-brands fa-google text-amber-400"></i>
+                        <span>{t.joinReader}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* شرح فلسفة الاسم */}
+                <div className="bg-gradient-to-b from-stone-900/60 to-stone-950/90 border border-stone-800/80 rounded-3xl p-8 sm:p-12 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-amber-600/5 rounded-full blur-3xl -z-10"></div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                    <div className={`space-y-2 ${lang === 'ar' ? 'border-l-0 md:border-l border-stone-800 md:pl-8' : 'border-r-0 md:border-r border-stone-800 md:pr-8'}`}>
+                      <span className="text-amber-500 font-cinzel text-xs tracking-widest block uppercase">THE IDENTITY</span>
+                      <h3 className="text-3xl font-bold font-cinzel text-stone-100">{t.identityTitle}</h3>
+                      <p className="text-xs text-stone-500 font-mono">{t.identitySub}</p>
+                    </div>
+
+                    <div className="md:col-span-2 space-y-4 text-stone-300 leading-relaxed font-light text-sm sm:text-base">
+                      <p>{t.identityP1}</p>
+                      <p className="text-stone-400 text-xs sm:text-sm">{t.identityP2}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* المميزات */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <div className="bg-stone-900/40 border border-stone-800/70 p-6 rounded-2xl space-y-3">
+                    <div className="w-10 h-10 bg-amber-950/40 rounded-lg flex items-center justify-center text-amber-400 text-lg">
+                      <i className="fa-solid fa-brain"></i>
+                    </div>
+                    <h4 className="text-base font-bold text-stone-200">{t.feat1Title}</h4>
+                    <p className="text-xs text-stone-400 leading-relaxed">{t.feat1Desc}</p>
+                  </div>
+
+                  <div className="bg-stone-900/40 border border-stone-800/70 p-6 rounded-2xl space-y-3">
+                    <div className="w-10 h-10 bg-amber-950/40 rounded-lg flex items-center justify-center text-amber-400 text-lg">
+                      <i className="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h4 className="text-base font-bold text-stone-200">{t.feat2Title}</h4>
+                    <p className="text-xs text-stone-400 leading-relaxed">{t.feat2Desc}</p>
+                  </div>
+
+                  <div className="bg-stone-900/40 border border-stone-800/70 p-6 rounded-2xl space-y-3">
+                    <div className="w-10 h-10 bg-amber-950/40 rounded-lg flex items-center justify-center text-amber-400 text-lg">
+                      <i className="fa-solid fa-book-journal-whills"></i>
+                    </div>
+                    <h4 className="text-base font-bold text-stone-200">{t.feat3Title}</h4>
+                    <p className="text-xs text-stone-400 leading-relaxed">{t.feat3Desc}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* صفحة المكتبة */}
+            {view === 'books' && (
+              <div className="space-y-8">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-stone-800 pb-5">
+                  <div>
+                    <h3 className="text-2xl font-bold text-stone-100 font-amiri">{t.libTitle}</h3>
+                    <p className="text-xs text-stone-500 mt-1">{t.libSub}</p>
+                  </div>
+                  
+                  <div className="flex gap-2 text-xs flex-wrap items-center">
+                    <button 
+                      onClick={() => setSelectedGenre('all')} 
+                      className={`px-3.5 py-1.5 rounded-lg transition ${selectedGenre === 'all' ? 'bg-amber-600 text-stone-950 font-bold' : 'bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800'}`}
+                    >
+                      {t.allGenres}
+                    </button>
+                    {GENRES.map(g => (
+                      <button 
+                        key={g.id}
+                        onClick={() => setSelectedGenre(g.id)} 
+                        className={`px-3.5 py-1.5 rounded-lg transition ${selectedGenre === g.id ? 'bg-amber-600 text-stone-950 font-bold' : 'bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800'}`}
+                      >
+                        {lang === 'ar' ? g.labelAr : g.labelEn}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {filteredBooks.length === 0 ? (
+                  <div className="bg-stone-900/30 border border-stone-800/80 rounded-3xl p-16 text-center space-y-4">
+                    <i className="fa-solid fa-feather-pointed text-4xl text-amber-500/50 mb-2"></i>
+                    <h4 className="text-xl font-bold text-stone-200">{t.emptyBooks}</h4>
+                    <p className="text-stone-500 max-w-md mx-auto text-xs">{t.emptySub}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredBooks.map(book => (
+                      <div key={book.id} className="bg-stone-900/70 border border-stone-800 rounded-2xl overflow-hidden flex flex-col justify-between group hover:border-amber-500/40 hover:shadow-2xl transition duration-300">
+                        <div>
+                          <div className="relative overflow-hidden">
+                            <img src={book.coverUrl} alt={book.titleAr || book.titleEn} className="w-full h-64 object-cover group-hover:scale-105 transition duration-500" />
+                            {book.isFree && (
+                              <span className={`absolute top-3 ${lang === 'ar' ? 'left-3' : 'right-3'} bg-emerald-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-3 py-1 rounded-md shadow-lg uppercase tracking-wider`}>
+                                {t.freeBadge}
+                              </span>
+                            )}
+                          </div>
+                          <div className="p-5 space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[10px] bg-amber-950/60 text-amber-400 border border-amber-800/40 px-2.5 py-0.5 rounded-full font-sans">
+                                {getGenreLabel(book.genre, lang)}
+                              </span>
+                              <span className="text-[10px] text-stone-400 border border-stone-800 bg-stone-950 px-2 py-0.5 rounded">
+                                AR | EN
+                              </span>
+                            </div>
+                            <h4 className="text-xl font-bold text-stone-100 group-hover:text-amber-400 transition font-amiri">
+                              {lang === 'ar' ? (book.titleAr || book.titleEn) : (book.titleEn || book.titleAr)}
+                            </h4>
+                            <p className="text-xs text-stone-500 font-cinzel">{book.titleEn}</p>
+                            <p className="text-stone-400 text-xs line-clamp-3 mt-2 leading-relaxed font-light">{book.desc}</p>
+                          </div>
+                        </div>
+
+                        <div className="p-5 pt-3 border-t border-stone-800/60 mt-4 space-y-3">
+                          <div className="flex justify-between items-center">
+                            {book.isFree ? (
+                              <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                                <i className="fa-solid fa-circle-check"></i>
+                                <span>{t.freeEdition}</span>
+                              </span>
+                            ) : (
+                              <span className="text-base font-bold text-amber-400 font-mono">${book.price} USDT</span>
+                            )}
+                          </div>
+
+                          {book.isFree ? (
+                            <div className="grid grid-cols-2 gap-2">
+                              <button 
+                                onClick={() => handleFreeReadClick(book, 'ar')}
+                                className="bg-emerald-950/40 border border-emerald-600/40 hover:bg-emerald-600 hover:text-white text-emerald-300 font-bold text-[11px] py-2 rounded-lg transition flex items-center justify-center gap-1.5"
+                              >
+                                <i className="fa-solid fa-file-pdf"></i>
+                                <span>{t.readAr}</span>
+                              </button>
+                              <button 
+                                onClick={() => handleFreeReadClick(book, 'en')}
+                                className="bg-stone-900 border border-stone-700 hover:bg-emerald-600 hover:text-white text-stone-300 font-bold text-[11px] py-2 rounded-lg transition flex items-center justify-center gap-1.5 font-cinzel"
+                              >
+                                <i className="fa-solid fa-file-pdf"></i>
+                                <span>{t.readEn}</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-2">
+                              <button 
+                                onClick={() => handleBuyClick(book, 'ar')}
+                                className="bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold text-[11px] py-2 rounded-lg transition flex items-center justify-center gap-1.5 shadow"
+                              >
+                                <i className="fa-solid fa-cart-shopping text-[10px]"></i>
+                                <span>{t.buyAr}</span>
+                              </button>
+                              <button 
+                                onClick={() => handleBuyClick(book, 'en')}
+                                className="bg-stone-900 hover:bg-amber-600 hover:text-stone-950 text-amber-400 border border-amber-600/40 font-bold text-[11px] py-2 rounded-lg transition flex items-center justify-center gap-1.5 font-cinzel shadow"
+                              >
+                                <i className="fa-solid fa-cart-shopping text-[10px]"></i>
+                                <span>{t.buyEn}</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* نافذة الدفع */}
+            {view === 'checkout' && checkoutData && (
+              <div className="bg-stone-900 border border-stone-800 p-8 rounded-3xl max-w-lg mx-auto shadow-2xl text-center space-y-6">
+                <div>
+                  <span className="text-xs text-amber-500 uppercase tracking-widest border border-amber-500/20 px-3 py-1 rounded-full">{t.invoiceTitle}</span>
+                  <h3 className="text-2xl font-bold text-stone-100 mt-3 font-amiri">
+                    {lang === 'ar' ? (checkoutData.book.titleAr || checkoutData.book.titleEn) : (checkoutData.book.titleEn || checkoutData.book.titleAr)}
+                  </h3>
+                  
+                  <div className="mt-2 inline-block bg-amber-950/50 border border-amber-600/40 text-amber-300 text-xs px-3 py-1 rounded-full">
+                    {t.selectedEdition} <strong>{checkoutData.editionLang === 'ar' ? t.editionArName : t.editionEnName}</strong>
+                  </div>
+
+                  <div className="mt-2 text-xs text-stone-400">
+                    {t.buyerAccount} <span className="text-amber-400 font-bold font-mono">{user ? user.email : ''}</span>
+                  </div>
+                  <p className="text-sm text-stone-400 mt-2 font-mono">
+                    {t.requiredAmount} <span className="text-amber-400 font-bold text-lg">${checkoutData.book.price} USDT</span>
+                  </p>
+                </div>
+
+                <div className="border-t border-stone-800 pt-4 text-xs text-stone-400">
+                  {t.payNotice}
+                </div>
+                
+                <div className="bg-white p-3 rounded-2xl inline-block shadow-inner mx-auto">
+                  <img 
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${WALLET_ADDRESS}`} 
+                    alt="USDT TRC20 QR Code" 
+                    className="w-48 h-48"
+                  />
+                </div>
+
+                <div className="bg-stone-950 border border-stone-800 p-4 rounded-xl text-right space-y-2">
+                  <div className="flex justify-between items-center text-xs text-stone-400">
+                    <span>{t.walletAddressLabel}</span>
+                    <span className="text-amber-500 font-semibold">{NETWORK}</span>
+                  </div>
+                  <div className="font-mono text-xs break-all text-amber-200 select-all p-2.5 bg-stone-900 rounded-lg border border-stone-800">
+                    {WALLET_ADDRESS}
+                  </div>
+                  <button 
+                    onClick={copyAddress}
+                    className="w-full mt-2 bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold text-xs py-2.5 rounded-lg transition flex items-center justify-center gap-2"
+                  >
+                    <i className="fa-regular fa-copy"></i>
+                    {copied ? t.copiedText : t.copyBtn}
+                  </button>
+                </div>
+
+                <div className="text-[11px] text-stone-500">
+                  {t.supportNotice} <span className="text-stone-300 font-mono">{OFFICIAL_EMAIL}</span>
+                </div>
+
+                <button 
+                  onClick={() => setView('books')} 
+                  className="text-xs text-stone-400 hover:text-stone-200 underline block mx-auto pt-2"
+                >
+                  {t.cancelBtn}
+                </button>
+              </div>
+            )}
+
+            {/* لوحة تحكم الإدارة: عربية بالكامل */}
+            {view === 'admin' && isAdmin && (
+              <div className="space-y-10 text-right" dir="rtl">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-stone-800 pb-5">
+                  <div>
+                    <h3 className="text-2xl font-bold text-amber-400 flex items-center gap-2">
+                      <i className="fa-solid fa-shield-halved"></i>
+                      <span>لوحة تحكم دار النشر (الإدارة)</span>
+                    </h3>
+                    <p className="text-xs text-stone-400 mt-1">متابعة إحصائيات الموقع، سجل الزبائن، ونشر الروايات بالنسختين العربية والإنجليزية</p>
+                  </div>
+                  <button onClick={() => { setIsAdmin(false); setView('home'); }} className="text-xs bg-rose-950/60 border border-rose-800/40 text-rose-300 px-4 py-2 rounded-lg hover:bg-rose-900/60 transition">
+                    تسجيل الخروج وتأمين اللوحة
+                  </button>
+                </div>
+
+                {/* كروت الإحصائيات */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-2xl flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-stone-400">إجمالي زيارات الموقع</p>
+                      <h4 className="text-3xl font-bold text-amber-400 mt-1 font-mono">{visitorsCount}</h4>
+                    </div>
+                    <div className="w-12 h-12 bg-amber-950/40 rounded-xl flex items-center justify-center text-amber-500 text-xl border border-amber-800/30">
+                      <i className="fa-solid fa-eye"></i>
+                    </div>
+                  </div>
+
+                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-2xl flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-stone-400">عدد المشتركين (حسابات Google)</p>
+                      <h4 className="text-3xl font-bold text-emerald-400 mt-1 font-mono">{subscribers.length}</h4>
+                    </div>
+                    <div className="w-12 h-12 bg-emerald-950/40 rounded-xl flex items-center justify-center text-emerald-500 text-xl border border-emerald-800/30">
+                      <i className="fa-solid fa-users"></i>
+                    </div>
+                  </div>
+
+                  <div className="bg-stone-900 border border-stone-800 p-6 rounded-2xl flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-stone-400">عدد الروايات المنشورة</p>
+                      <h4 className="text-3xl font-bold text-stone-200 mt-1 font-mono">{books.length}</h4>
+                    </div>
+                    <div className="w-12 h-12 bg-stone-800/80 rounded-xl flex items-center justify-center text-stone-400 text-xl">
+                      <i className="fa-solid fa-book-bookmark"></i>
+                    </div>
+                  </div>
+                </div>
+
+                {/* جدول المشتركين */}
+                <div className="bg-stone-900 border border-stone-800 p-6 rounded-2xl space-y-4">
+                  <div className="flex justify-between items-center border-b border-stone-800 pb-3">
+                    <div>
+                      <h4 className="text-base font-bold text-stone-200">سجل إيميلات الزبائن والمشتركين</h4>
+                      <p className="text-xs text-stone-400">قائمة بكل المستخدمين الذين سجلوا الدخول بحساباتهم</p>
+                    </div>
+                    <span className="text-xs bg-stone-950 border border-stone-800 px-3 py-1 rounded-md font-mono text-amber-400">
+                      {subscribers.length} زبون
+                    </span>
+                  </div>
+
+                  {subscribers.length === 0 ? (
+                    <div className="text-center py-8 text-stone-500 text-xs">
+                      لا توجد حسابات مسجلة بعد. عند دخول أي زبون للشراء سيظهر إيميله وبياناته هنا فوراً.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-right text-xs">
+                        <thead>
+                          <tr className="border-b border-stone-800 text-stone-400">
+                            <th className="py-2.5 px-3">اسم الزبون</th>
+                            <th className="py-2.5 px-3">البريد الإلكتروني (Gmail)</th>
+                            <th className="py-2.5 px-3">تاريخ ووقت التسجيل</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-stone-800/60">
+                          {subscribers.map((sub, idx) => (
+                            <tr key={idx} className="hover:bg-stone-950/50 transition">
+                              <td className="py-2.5 px-3 font-bold text-stone-200 flex items-center gap-2">
+                                <img src={sub.avatar} alt={sub.name} className="w-6 h-6 rounded-full" />
+                                <span>{sub.name}</span>
+                              </td>
+                              <td className="py-2.5 px-3 font-mono text-amber-300">{sub.email}</td>
+                              <td className="py-2.5 px-3 text-stone-500 font-mono">{sub.joinedAt}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* نموذج إضافة رواية جديدة */}
+                <form onSubmit={handleAddBook} className="bg-stone-900 border border-stone-800 p-6 rounded-2xl space-y-5">
+                  <div className="flex justify-between items-center border-b border-stone-800 pb-3">
+                    <div>
+                      <h4 className="text-lg font-bold text-stone-200">إضافة ونشر رواية جديدة</h4>
+                      <p className="text-xs text-stone-400">املأ البيانات لنشر الرواية فوراً في المتجر</p>
+                    </div>
+
+                    <label className="flex items-center gap-2 cursor-pointer bg-stone-950 px-3.5 py-2 rounded-xl border border-stone-800 select-none">
+                      <input 
+                        type="checkbox" 
+                        checked={newBook.isFree}
+                        onChange={e => setNewBook({...newBook, isFree: e.target.checked})}
+                        className="w-4 h-4 accent-emerald-500 cursor-pointer"
+                      />
+                      <span className={`text-xs font-bold ${newBook.isFree ? 'text-emerald-400' : 'text-stone-400'}`}>
+                        هذه الرواية مجانية (بدون دفع)
+                      </span>
+                    </label>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-xs text-stone-300 block mb-1 font-bold">اسم الرواية باللغة العربية</label>
+                      <input 
+                        required
+                        type="text" 
+                        value={newBook.titleAr} 
+                        onChange={e => setNewBook({...newBook, titleAr: e.target.value})}
+                        placeholder="مثال: الغرفة رقم 4" 
+                        className="w-full bg-stone-950 border border-stone-800 px-3 py-2.5 rounded-lg text-sm text-stone-200 focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-stone-300 block mb-1 font-bold">اسم الرواية باللغة الإنجليزية (English Title)</label>
+                      <input 
+                        type="text" 
+                        value={newBook.titleEn} 
+                        onChange={e => setNewBook({...newBook, titleEn: e.target.value})}
+                        placeholder="مثال: Room No. 4" 
+                        className="w-full bg-stone-950 border border-stone-800 px-3 py-2.5 rounded-lg text-sm text-stone-200 focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-xs text-stone-300 block mb-1 font-bold">قسم وتصنيف الرواية</label>
+                      <select 
+                        value={newBook.genre} 
+                        onChange={e => setNewBook({...newBook, genre: e.target.value})}
+                        className="w-full bg-stone-950 border border-stone-800 px-3 py-2.5 rounded-lg text-sm text-stone-200 focus:border-amber-500 focus:outline-none"
+                      >
+                        {GENRES.map(g => (
+                          <option key={g.id} value={g.id}>{g.labelAr}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-stone-300 block mb-1 font-bold">سعر الرواية (بالدولار USDT)</label>
+                      <input 
+                        disabled={newBook.isFree}
+                        type="number" 
+                        step="0.5"
+                        value={newBook.isFree ? '0.00' : newBook.price} 
+                        onChange={e => setNewBook({...newBook, price: e.target.value})}
+                        className={`w-full bg-stone-950 border border-stone-800 px-3 py-2.5 rounded-lg text-sm ${newBook.isFree ? 'text-emerald-500 opacity-60 cursor-not-allowed' : 'text-stone-200'}`}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-stone-300 block mb-1 font-bold">رابط صورة غلاف الرواية</label>
+                      <input 
+                        type="text" 
+                        value={newBook.coverUrl} 
+                        onChange={e => setNewBook({...newBook, coverUrl: e.target.value})}
+                        placeholder="ضع هنا رابط الصورة المباشر" 
+                        className="w-full bg-stone-950 border border-stone-800 px-3 py-2.5 rounded-lg text-sm text-stone-200 focus:border-amber-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-
