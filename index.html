@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VAYRON | دار فايرون للنشر الرقمي</title>
+  
+  <!-- شعار الموقع الفاخر المدمج -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3CradialGradient id='bg' cx='50%25' cy='50%25' r='50%25'%3E%3Cstop offset='0%25' stop-color='%231c1917'/%3E%3Cstop offset='100%25' stop-color='%230c0a09'/%3E%3C/radialGradient%3E%3ClinearGradient id='gold' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23fef3c7'/%3E%3Cstop offset='30%25' stop-color='%23f59e0b'/%3E%3Cstop offset='70%25' stop-color='%23d97706'/%3E%3Cstop offset='100%25' stop-color='%2378350f'/%3E%3C/linearGradient%3E%3ClinearGradient id='dark' x1='100%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23b45309'/%3E%3Cstop offset='100%25' stop-color='%23451a03'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='512' height='512' rx='120' fill='url(%23bg)'/%3E%3Crect width='506' height='506' x='3' y='3' rx='117' fill='none' stroke='url(%23gold)' stroke-width='4' opacity='0.4'/%3E%3Cpath d='M96 120 L204 120 L256 320 L216 320 L136 156 L96 156 Z' fill='url(%23gold)'/%3E%3Cpath d='M416 120 L308 120 L256 320 L296 320 L376 156 L416 156 Z' fill='url(%23dark)'/%3E%3Cpolygon points='256,130 286,290 256,430 226,290' fill='url(%23gold)'/%3E%3Cpolygon points='256,130 286,290 256,430' fill='%23000000' opacity='0.3'/%3E%3Cline x1='256' y1='240' x2='256' y2='390' stroke='%230c0a09' stroke-width='5' stroke-linecap='round'/%3E%3Ccircle cx='256' cy='235' r='5.5' fill='%230c0a09'/%3E%3C/svg%3E" />
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- React & ReactDOM -->
@@ -46,6 +50,7 @@
       const [view, setView] = React.useState('home');
       const [isAdmin, setIsAdmin] = React.useState(false);
       const [adminTab, setAdminTab] = React.useState('stats'); // 'stats' or 'publish'
+      const [publishType, setPublishType] = React.useState('both'); // 'both', 'ar_only', 'en_only'
       const [showSecretModal, setShowSecretModal] = React.useState(false);
       const [adminPass, setAdminPass] = React.useState('');
       const [adminError, setAdminError] = React.useState(false);
@@ -86,22 +91,24 @@
       const [checkoutData, setCheckoutData] = React.useState(null);
       const [copied, setCopied] = React.useState(false);
 
-      // بيانات إضافة رواية جديدة مع رفع الملفات مباشرة
+      // نموذج إضافة كتاب جديد
       const [newBook, setNewBook] = React.useState({
+        type: 'both', // 'both', 'ar_only', 'en_only'
         titleAr: '',
         titleEn: '',
         genre: 'psychological',
         price: '4.99',
         isFree: false,
         desc: '',
-        coverData: '',
+        coverArData: '',
+        coverEnData: '',
         pdfArData: '',
         pdfArName: '',
         pdfEnData: '',
         pdfEnName: ''
       });
 
-      // احتساب الزيارة
+      // احتساب الزيارات
       React.useEffect(() => {
         if (!sessionStorage.getItem('counted')) {
           const next = viewsCount + 1;
@@ -111,7 +118,7 @@
         }
       }, []);
 
-      // اختصار الكيبورد Ctrl + Shift + A
+      // اختصار الكيبورد
       React.useEffect(() => {
         const onKey = (e) => {
           if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a' || e.code === 'KeyA')) {
@@ -134,24 +141,25 @@
         setTimeout(() => { clickCountRef.current = 0; }, 1200);
       };
 
-      // دوال رفع الملفات المباشرة
-      const handleCoverUpload = (e) => {
+      // معالجة رفع الصور
+      const handleImageUpload = (e, targetField) => {
         const file = e.target.files[0];
         if (file) {
           const reader = new FileReader();
           reader.onload = (ev) => {
-            setNewBook(prev => ({ ...prev, coverData: ev.target.result }));
+            setNewBook(prev => ({ ...prev, [targetField]: ev.target.result }));
           };
           reader.readAsDataURL(file);
         }
       };
 
-      const handlePdfUpload = (e, type) => {
+      // معالجة رفع الـ PDF
+      const handlePdfUpload = (e, langType) => {
         const file = e.target.files[0];
         if (file) {
           const reader = new FileReader();
           reader.onload = (ev) => {
-            if (type === 'ar') {
+            if (langType === 'ar') {
               setNewBook(prev => ({ ...prev, pdfArData: ev.target.result, pdfArName: file.name }));
             } else {
               setNewBook(prev => ({ ...prev, pdfEnData: ev.target.result, pdfEnName: file.name }));
@@ -199,11 +207,10 @@
       const handleBuy = (book, edition) => {
         const executeCheckout = (activeUser) => {
           setCheckoutData({ book, edition });
-          // تسجيل المعاملة في سجل المبيعات
           const newOrder = {
             id: Date.now(),
-            bookTitle: book.titleAr || book.titleEn,
-            edition: edition === 'ar' ? 'عربي' : 'English',
+            bookTitle: edition === 'ar' ? (book.titleAr || book.titleEn) : (book.titleEn || book.titleAr),
+            edition: edition === 'ar' ? 'النسخة العربية' : 'English Edition',
             price: book.price,
             userEmail: activeUser.email,
             userName: activeUser.name,
@@ -244,25 +251,30 @@
 
       const handleAddBook = (e) => {
         e.preventDefault();
-        if (!newBook.titleAr && !newBook.titleEn) return;
+        const defaultCover = 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80';
         const b = {
           ...newBook,
           id: Date.now(),
+          type: publishType,
           price: newBook.isFree ? '0.00' : newBook.price,
-          coverData: newBook.coverData || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'
+          coverArData: newBook.coverArData || defaultCover,
+          coverEnData: newBook.coverEnData || defaultCover
         };
+
         const updated = [b, ...books];
         setBooks(updated);
         localStorage.setItem('vayron_books', JSON.stringify(updated));
-        alert('تم نشر الرواية بنجاح في المكتبة!');
+        alert('تم نشر الرواية بنجاح!');
         setNewBook({
+          type: publishType,
           titleAr: '',
           titleEn: '',
           genre: 'psychological',
           price: '4.99',
           isFree: false,
           desc: '',
-          coverData: '',
+          coverArData: '',
+          coverEnData: '',
           pdfArData: '',
           pdfArName: '',
           pdfEnData: '',
@@ -287,7 +299,7 @@
         <div className="min-h-screen flex flex-col justify-between" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
           {/* Header */}
           <header className="border-b border-stone-800 bg-stone-950/80 backdrop-blur px-6 py-4 flex justify-between items-center sticky top-0 z-40">
-            <div className="flex items-center gap-3 cursor-pointer select-none" onClick={handleLogoTripleClick} title="انقر 3 مرات لفتح لوحة الإدارة">
+            <div className="flex items-center gap-3 cursor-pointer select-none" onClick={handleLogoTripleClick} title="انقر 3 مرات متتالية لفتح لوحة الإدارة">
               <h1 className="text-3xl font-cinzel tracking-widest text-amber-500 font-bold hover:opacity-80 transition">VAYRON</h1>
               <span className="text-[10px] text-stone-500 border-r border-stone-800 pr-3 hidden sm:inline font-cinzel">
                 NOTHING IS WHAT IT SEEMS
@@ -309,7 +321,7 @@
                 </button>
               )}
 
-              {/* تبديل اللغة */}
+              {/* تبديل لغة الموقع */}
               <div className="flex bg-stone-900 border border-stone-800 rounded-full p-0.5 text-xs">
                 <button onClick={() => setLang('ar')} className={`px-2 py-0.5 rounded-full ${lang === 'ar' ? 'bg-amber-600 text-stone-950 font-bold' : 'text-stone-400'}`}>عربي</button>
                 <button onClick={() => setLang('en')} className={`px-2 py-0.5 rounded-full ${lang === 'en' ? 'bg-amber-600 text-stone-950 font-bold' : 'text-stone-400'}`}>EN</button>
@@ -347,8 +359,8 @@
                   </h2>
                   <p className="text-stone-400 text-base font-light">
                     {lang === 'ar' 
-                      ? 'المنصة الرقمية المتخصصة في أدب الغموض، التحقيقات، وحبكات الإثارة النفسية المعاصرة.'
-                      : 'The premier digital sanctum for contemporary mystery, psychological noir, and atmospheric fiction.'}
+                      ? 'المنصة الرقمية المتخصصة في أدب الغموض، التحقيقات، وحبكات الإثارة النفسية المعاصرة باللغتين العربية والإنجليزية.'
+                      : 'The premier digital sanctum for contemporary mystery, psychological noir, and atmospheric fiction in Arabic and English editions.'}
                   </p>
                   <div>
                     <button onClick={() => setView('books')} className="bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold px-8 py-3 rounded-xl shadow-lg transition">
@@ -361,18 +373,21 @@
                   <h3 className="text-2xl font-bold font-cinzel text-amber-500 mb-3">VAYRON</h3>
                   <p className="text-stone-300 text-sm leading-relaxed">
                     {lang === 'ar'
-                      ? 'فايرون (VAYRON) ليس مجرد دار نشر، بل هو الحد الفاصل بين الحقيقة والوهم. تم تأسيس الدار لتقديم تجربة قراءة فريدة في عوالم الغموض والإثارة النفسية.'
-                      : 'VAYRON is not merely a publishing mark; it is the boundary dividing certainty from illusion, dedicated to deep psychological thrillers and atmospheric mystery.'}
+                      ? 'فايرون (VAYRON) دار نشر رقمية رائدة متخصصة في أدب الغموض والإثارة النفسية، تقدم أعمالها بطبعات ثنائية اللغة لربط القارئ العربي بالعالمية.'
+                      : 'VAYRON is an avant-garde digital publishing house specializing in psychological suspense and noir mysteries with dual-language accessibility.'}
                   </p>
                 </div>
               </div>
             )}
 
-            {/* المكتبة */}
+            {/* المكتبة: عرض الروايات مع ظهور الغلافين جنباً إلى جنب إذا كانت ثنائية */}
             {view === 'books' && (
               <div className="space-y-8">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-stone-800 pb-4">
-                  <h3 className="text-2xl font-bold text-stone-100 font-amiri">{lang === 'ar' ? 'المكتبة المنشورة' : 'Published Works'}</h3>
+                  <div>
+                    <h3 className="text-2xl font-bold text-stone-100 font-amiri">{lang === 'ar' ? 'المكتبة المنشورة' : 'Published Works'}</h3>
+                    <p className="text-xs text-stone-500 mt-1">تصفح الروايات واختر نسختك المفضلة (العربية أو الإنجليزية)</p>
+                  </div>
                   <div className="flex gap-1.5 flex-wrap text-xs">
                     <button onClick={() => setSelectedGenre('all')} className={`px-3 py-1.5 rounded-lg ${selectedGenre === 'all' ? 'bg-amber-600 text-stone-950 font-bold' : 'bg-stone-900 text-stone-400'}`}>
                       {lang === 'ar' ? 'الكل' : 'All'}
@@ -391,54 +406,119 @@
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredBooks.map(book => (
-                      <div key={book.id} className="bg-stone-900/70 border border-stone-800 rounded-2xl overflow-hidden flex flex-col justify-between">
-                        <div>
-                          <img src={book.coverData} className="w-full h-56 object-cover" alt="" />
-                          <div className="p-5 space-y-2">
-                            <span className="text-[10px] bg-amber-950/60 text-amber-400 border border-amber-800/40 px-2 py-0.5 rounded-full font-sans">
-                              {GENRES.find(g => g.id === book.genre)?.[lang === 'ar' ? 'labelAr' : 'labelEn'] || book.genre}
-                            </span>
-                            <h4 className="text-xl font-bold font-amiri text-stone-100">{lang === 'ar' ? (book.titleAr || book.titleEn) : (book.titleEn || book.titleAr)}</h4>
-                            <p className="text-xs text-stone-400 line-clamp-3">{book.desc}</p>
-                          </div>
-                        </div>
+                    {filteredBooks.map(book => {
+                      const isBoth = (!book.type || book.type === 'both');
+                      const isArOnly = book.type === 'ar_only';
+                      const isEnOnly = book.type === 'en_only';
 
-                        <div className="p-5 pt-3 border-t border-stone-800/60 space-y-3">
-                          <div className="flex justify-between items-center text-sm font-bold">
-                            {book.isFree ? (
-                              <span className="text-emerald-400">{lang === 'ar' ? 'مجانية' : 'Free'}</span>
+                      return (
+                        <div key={book.id} className="bg-stone-900/80 border border-stone-800 rounded-3xl p-5 flex flex-col justify-between hover:border-amber-500/30 transition shadow-xl">
+                          <div>
+                            {/* شريط التصنيف والشارة */}
+                            <div className="flex justify-between items-center mb-3">
+                              <span className="text-[10px] bg-amber-950/60 text-amber-400 border border-amber-800/40 px-2.5 py-0.5 rounded-full">
+                                {GENRES.find(g => g.id === book.genre)?.[lang === 'ar' ? 'labelAr' : 'labelEn'] || book.genre}
+                              </span>
+                              {isBoth && (
+                                <span className="text-[10px] bg-stone-950 text-amber-300 border border-amber-600/30 px-2.5 py-0.5 rounded-full font-mono">
+                                  🌐 Dual Edition (نسختان)
+                                </span>
+                              )}
+                              {isArOnly && (
+                                <span className="text-[10px] bg-stone-950 text-emerald-400 border border-emerald-600/30 px-2 py-0.5 rounded-full">
+                                  🇸🇦 طبعة عربية
+                                </span>
+                              )}
+                              {isEnOnly && (
+                                <span className="text-[10px] bg-stone-950 text-sky-400 border border-sky-600/30 px-2 py-0.5 rounded-full font-cinzel">
+                                  🇬🇧 English Edition
+                                </span>
+                              )}
+                            </div>
+
+                            {/* عرض الأغلفة: إذا ثنائية يظهر الكتابين جنباً إلى جنب! */}
+                            {isBoth ? (
+                              <div className="grid grid-cols-2 gap-3 bg-stone-950 p-2.5 rounded-2xl border border-stone-800/80 mb-4">
+                                {/* الغلاف العربي */}
+                                <div className="space-y-1.5 text-center">
+                                  <div className="relative group overflow-hidden rounded-xl border border-stone-800">
+                                    <img src={book.coverArData || book.coverEnData} className="w-full h-44 object-cover group-hover:scale-105 transition duration-300" alt="Arabic Cover" />
+                                    <span className="absolute bottom-1 right-1 bg-black/70 backdrop-blur-sm text-[9px] text-amber-300 px-1.5 py-0.5 rounded">عربي</span>
+                                  </div>
+                                  <p className="text-[11px] font-bold text-stone-200 truncate font-amiri">{book.titleAr || 'النسخة العربية'}</p>
+                                </div>
+
+                                {/* الغلاف الأجنبي */}
+                                <div className="space-y-1.5 text-center">
+                                  <div className="relative group overflow-hidden rounded-xl border border-stone-800">
+                                    <img src={book.coverEnData || book.coverArData} className="w-full h-44 object-cover group-hover:scale-105 transition duration-300" alt="English Cover" />
+                                    <span className="absolute bottom-1 left-1 bg-black/70 backdrop-blur-sm text-[9px] text-sky-300 px-1.5 py-0.5 rounded font-cinzel">EN</span>
+                                  </div>
+                                  <p className="text-[11px] font-bold text-stone-200 truncate font-cinzel">{book.titleEn || 'English Edition'}</p>
+                                </div>
+                              </div>
                             ) : (
-                              <span className="text-amber-400 font-mono">${book.price} USDT</span>
+                              /* غلاف فردي للكتب المنشورة بلغة واحدة */
+                              <div className="mb-4">
+                                <img src={isEnOnly ? book.coverEnData : book.coverArData} className="w-full h-52 object-cover rounded-2xl border border-stone-800" alt="" />
+                              </div>
+                            )}
+
+                            {/* العناوين والوصف */}
+                            <div className="space-y-1">
+                              <h4 className="text-lg font-bold font-amiri text-stone-100">{book.titleAr || book.titleEn}</h4>
+                              {book.titleEn && <p className="text-xs text-stone-500 font-cinzel">{book.titleEn}</p>}
+                              <p className="text-xs text-stone-400 line-clamp-2 mt-2">{book.desc}</p>
+                            </div>
+                          </div>
+
+                          {/* أزرار الشراء والقراءة المنفصلة */}
+                          <div className="pt-4 border-t border-stone-800/80 mt-4 space-y-3">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-stone-400">السعر:</span>
+                              {book.isFree ? (
+                                <span className="text-emerald-400 font-bold text-sm">مجاني (Free)</span>
+                              ) : (
+                                <span className="text-amber-400 font-mono font-bold text-sm">${book.price} USDT</span>
+                              )}
+                            </div>
+
+                            {/* خيارات الشراء أو القراءة */}
+                            {book.isFree ? (
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                {(!isEnOnly) && (
+                                  <button onClick={() => handleRead(book, 'ar')} className="bg-emerald-950/60 border border-emerald-600/40 hover:bg-emerald-600 hover:text-white text-emerald-300 py-2 rounded-xl transition flex items-center justify-center gap-1.5">
+                                    <i className="fa-solid fa-file-pdf"></i>
+                                    <span>قراءة (العربية)</span>
+                                  </button>
+                                )}
+                                {(!isArOnly) && (
+                                  <button onClick={() => handleRead(book, 'en')} className="bg-stone-900 border border-stone-700 hover:bg-emerald-600 hover:text-white text-stone-300 py-2 rounded-xl transition font-cinzel flex items-center justify-center gap-1.5">
+                                    <i className="fa-solid fa-file-pdf"></i>
+                                    <span>Read (English)</span>
+                                  </button>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                {(!isEnOnly) && (
+                                  <button onClick={() => handleBuy(book, 'ar')} className="bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold py-2 rounded-xl transition flex items-center justify-center gap-1.5 shadow">
+                                    <i className="fa-solid fa-cart-shopping"></i>
+                                    <span>شراء (العربية)</span>
+                                  </button>
+                                )}
+                                {(!isArOnly) && (
+                                  <button onClick={() => handleBuy(book, 'en')} className="bg-stone-900 border border-amber-600/40 text-amber-400 hover:bg-amber-600 hover:text-stone-950 font-bold py-2 rounded-xl transition font-cinzel flex items-center justify-center gap-1.5 shadow">
+                                    <i className="fa-solid fa-cart-shopping"></i>
+                                    <span>Buy (English)</span>
+                                  </button>
+                                )}
+                              </div>
                             )}
                           </div>
-
-                          {book.isFree ? (
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <button onClick={() => handleRead(book, 'ar')} className="bg-emerald-950/50 border border-emerald-600/40 text-emerald-300 py-2 rounded-lg hover:bg-emerald-600 hover:text-white transition flex items-center justify-center gap-1">
-                                <i className="fa-solid fa-file-pdf"></i>
-                                <span>قراءة (عربي)</span>
-                              </button>
-                              <button onClick={() => handleRead(book, 'en')} className="bg-stone-900 border border-stone-700 text-stone-300 py-2 rounded-lg hover:bg-emerald-600 hover:text-white transition font-cinzel flex items-center justify-center gap-1">
-                                <i className="fa-solid fa-file-pdf"></i>
-                                <span>Read (EN)</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <button onClick={() => handleBuy(book, 'ar')} className="bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold py-2 rounded-lg transition flex items-center justify-center gap-1">
-                                <i className="fa-solid fa-cart-shopping"></i>
-                                <span>شراء (عربي)</span>
-                              </button>
-                              <button onClick={() => handleBuy(book, 'en')} className="bg-stone-900 border border-amber-600/40 text-amber-400 hover:bg-amber-600 hover:text-stone-950 font-bold py-2 rounded-lg transition font-cinzel flex items-center justify-center gap-1">
-                                <i className="fa-solid fa-cart-shopping"></i>
-                                <span>Buy (EN)</span>
-                              </button>
-                            </div>
-                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -448,10 +528,10 @@
             {view === 'checkout' && checkoutData && (
               <div className="bg-stone-900 border border-stone-800 p-8 rounded-3xl max-w-lg mx-auto text-center space-y-6">
                 <h3 className="text-2xl font-bold font-amiri text-stone-100">
-                  {lang === 'ar' ? (checkoutData.book.titleAr || checkoutData.book.titleEn) : (checkoutData.book.titleEn || checkoutData.book.titleAr)}
+                  {checkoutData.edition === 'ar' ? (checkoutData.book.titleAr || checkoutData.book.titleEn) : (checkoutData.book.titleEn || checkoutData.book.titleAr)}
                 </h3>
                 <div className="text-xs text-amber-400 bg-amber-950/40 border border-amber-800/40 px-3 py-1 rounded-full inline-block">
-                  النسخة: {checkoutData.edition === 'ar' ? 'العربية' : 'English Edition'}
+                  النسخة المختارة: {checkoutData.edition === 'ar' ? 'النسخة العربية الكاملة' : 'Complete English Edition'}
                 </div>
                 <p className="text-lg font-mono font-bold text-amber-400">${checkoutData.book.price} USDT</p>
 
@@ -478,7 +558,7 @@
               </div>
             )}
 
-            {/* لوحة تحكم الإدارة المقسمة إلى تبويبات */}
+            {/* لوحة تحكم الإدارة مع التقسيم الجديد للنشر */}
             {view === 'admin' && isAdmin && (
               <div className="space-y-8 text-right" dir="rtl">
                 {/* رأس لوحة التحكم والتبويبات */}
@@ -488,7 +568,6 @@
                     <p className="text-xs text-stone-400 mt-0.5">اختر القسم الذي تريد العمل عليه</p>
                   </div>
                   
-                  {/* أزرار التبديل بين الأقسام */}
                   <div className="flex items-center gap-2 bg-stone-900 p-1.5 rounded-xl border border-stone-800">
                     <button 
                       onClick={() => setAdminTab('stats')}
@@ -511,10 +590,9 @@
                   </button>
                 </div>
 
-                {/* القسم الأول: معلومات وإحصائيات الموقع (زيارات، تسجيل، مبيعات) */}
+                {/* قسم 1: معلومات وإحصائيات الموقع */}
                 {adminTab === 'stats' && (
                   <div className="space-y-8">
-                    {/* كروت الأرقام الإجمالية */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="bg-stone-900 p-5 rounded-2xl border border-stone-800 flex justify-between items-center">
                         <div>
@@ -539,7 +617,6 @@
                       </div>
                     </div>
 
-                    {/* جدول طلبات الشراء والمبيعات */}
                     <div className="bg-stone-900 p-6 rounded-2xl border border-stone-800 space-y-4">
                       <h4 className="font-bold text-stone-200 flex items-center gap-2">
                         <i className="fa-solid fa-money-bill-wave text-amber-400"></i>
@@ -575,7 +652,6 @@
                       )}
                     </div>
 
-                    {/* جدول تسجيل الدخول والمشتركين */}
                     <div className="bg-stone-900 p-6 rounded-2xl border border-stone-800 space-y-4">
                       <h4 className="font-bold text-stone-200 flex items-center gap-2">
                         <i className="fa-solid fa-user-check text-emerald-400"></i>
@@ -612,28 +688,67 @@
                   </div>
                 )}
 
-                {/* القسم الثاني: نشر وإدارة الروايات مع رفع الملفات مباشرة */}
+                {/* قسم 2: نشر وإدارة الروايات مع الاختيار الثلاثي للنشر */}
                 {adminTab === 'publish' && (
                   <div className="space-y-8">
-                    <form onSubmit={handleAddBook} className="bg-stone-900 p-6 rounded-2xl border border-stone-800 space-y-5">
-                      <div className="flex justify-between items-center border-b border-stone-800 pb-3">
-                        <h4 className="font-bold text-stone-200 text-lg">نشر رواية جديدة</h4>
+                    <form onSubmit={handleAddBook} className="bg-stone-900 p-6 rounded-2xl border border-stone-800 space-y-6">
+                      
+                      {/* اختيار نوع النشر */}
+                      <div className="border-b border-stone-800 pb-4">
+                        <label className="text-xs text-stone-400 block mb-2 font-bold">حدد نوع الإصدار الذي تريد نشره:</label>
+                        <div className="grid grid-cols-3 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setPublishType('both')}
+                            className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${publishType === 'both' ? 'bg-amber-600 text-stone-950 border-amber-500 shadow-lg' : 'bg-stone-950 border-stone-800 text-stone-400'}`}
+                          >
+                            <i className="fa-solid fa-globe"></i>
+                            <span>نشر باللغتين معاً (عربي + إنجليزي)</span>
+                          </button>
+                          
+                          <button
+                            type="button"
+                            onClick={() => setPublishType('ar_only')}
+                            className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${publishType === 'ar_only' ? 'bg-emerald-600 text-white border-emerald-500 shadow-lg' : 'bg-stone-950 border-stone-800 text-stone-400'}`}
+                          >
+                            <i className="fa-solid fa-book"></i>
+                            <span>نشر باللغة العربية فقط</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setPublishType('en_only')}
+                            className={`p-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-2 ${publishType === 'en_only' ? 'bg-sky-600 text-white border-sky-500 shadow-lg' : 'bg-stone-950 border-stone-800 text-stone-400'}`}
+                          >
+                            <i className="fa-solid fa-book-bookmark"></i>
+                            <span>نشر بالإنجليزية فقط (English Only)</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* حالة الرواية: مجانية أم مدفوعة */}
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-stone-400">سعر وخيارات الرواية:</span>
                         <label className="flex items-center gap-2 text-xs bg-stone-950 px-3 py-1.5 rounded-lg border border-stone-800 cursor-pointer">
                           <input type="checkbox" checked={newBook.isFree} onChange={e => setNewBook({...newBook, isFree: e.target.checked})} className="accent-emerald-500" />
                           <span className={newBook.isFree ? 'text-emerald-400 font-bold' : 'text-stone-400'}>إصدار مجاني (Free)</span>
                         </label>
                       </div>
 
-                      {/* العناوين */}
+                      {/* العناوين حسب لغة النشر المحددة */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs text-stone-400 block mb-1">اسم الرواية باللغة العربية</label>
-                          <input required type="text" value={newBook.titleAr} onChange={e => setNewBook({...newBook, titleAr: e.target.value})} placeholder="مثال: الغرفة رقم 4" className="w-full bg-stone-950 border border-stone-800 p-2.5 rounded-lg text-sm text-stone-200" />
-                        </div>
-                        <div>
-                          <label className="text-xs text-stone-400 block mb-1">اسم الرواية باللغة الإنجليزية (English Title)</label>
-                          <input type="text" value={newBook.titleEn} onChange={e => setNewBook({...newBook, titleEn: e.target.value})} placeholder="Room No. 4" className="w-full bg-stone-950 border border-stone-800 p-2.5 rounded-lg text-sm text-stone-200 text-left font-cinzel" />
-                        </div>
+                        {(publishType === 'both' || publishType === 'ar_only') && (
+                          <div>
+                            <label className="text-xs text-amber-400 block mb-1 font-bold">اسم الرواية باللغة العربية</label>
+                            <input required type="text" value={newBook.titleAr} onChange={e => setNewBook({...newBook, titleAr: e.target.value})} placeholder="مثال: الغرفة رقم 4" className="w-full bg-stone-950 border border-stone-800 p-2.5 rounded-lg text-sm text-stone-200" />
+                          </div>
+                        )}
+                        {(publishType === 'both' || publishType === 'en_only') && (
+                          <div>
+                            <label className="text-xs text-sky-400 block mb-1 font-bold">اسم الرواية باللغة الإنجليزية (English Title)</label>
+                            <input required type="text" value={newBook.titleEn} onChange={e => setNewBook({...newBook, titleEn: e.target.value})} placeholder="Room No. 4" className="w-full bg-stone-950 border border-stone-800 p-2.5 rounded-lg text-sm text-stone-200 text-left font-cinzel" />
+                          </div>
+                        )}
                       </div>
 
                       {/* القسم والسعر */}
@@ -650,47 +765,60 @@
                         </div>
                       </div>
 
-                      {/* رفع صورة الغلاف مباشرة */}
-                      <div className="bg-stone-950 p-4 rounded-xl border border-stone-800 space-y-2">
-                        <label className="text-xs text-amber-400 font-bold block">
-                          <i className="fa-solid fa-image ml-1"></i> رفع صورة الغلاف مباشرة من جهازك
-                        </label>
-                        <input type="file" accept="image/*" onChange={handleCoverUpload} className="w-full text-xs text-stone-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-600 file:text-stone-950 hover:file:bg-amber-500 cursor-pointer" />
-                        {newBook.coverData && (
-                          <div className="pt-2 flex items-center gap-3">
-                            <img src={newBook.coverData} alt="معاينة الغلاف" className="w-16 h-20 object-cover rounded border border-stone-700" />
-                            <span className="text-xs text-emerald-400">✓ تم اختيار صورة الغلاف بنجاح</span>
+                      {/* رفع أغلفة الكتب مباشرة من الجهاز */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(publishType === 'both' || publishType === 'ar_only') && (
+                          <div className="bg-stone-950 p-4 rounded-xl border border-stone-800 space-y-2">
+                            <label className="text-xs text-amber-400 font-bold block">
+                              <i className="fa-solid fa-image ml-1"></i> رفع صورة غلاف النسخة العربية
+                            </label>
+                            <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'coverArData')} className="w-full text-xs text-stone-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-amber-600 file:text-stone-950 hover:file:bg-amber-500 cursor-pointer" />
+                            {newBook.coverArData && <img src={newBook.coverArData} className="w-16 h-20 object-cover rounded border border-stone-700 mt-2" alt="" />}
+                          </div>
+                        )}
+
+                        {(publishType === 'both' || publishType === 'en_only') && (
+                          <div className="bg-stone-950 p-4 rounded-xl border border-stone-800 space-y-2">
+                            <label className="text-xs text-sky-400 font-bold block">
+                              <i className="fa-solid fa-image ml-1"></i> رفع صورة غلاف النسخة الإنجليزية
+                            </label>
+                            <input type="file" accept="image/*" onChange={e => handleImageUpload(e, 'coverEnData')} className="w-full text-xs text-stone-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-sky-600 file:text-white hover:file:bg-sky-500 cursor-pointer" />
+                            {newBook.coverEnData && <img src={newBook.coverEnData} className="w-16 h-20 object-cover rounded border border-stone-700 mt-2" alt="" />}
                           </div>
                         )}
                       </div>
 
                       {/* رفع ملفات الـ PDF مباشرة من الجهاز */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-stone-950 p-4 rounded-xl border border-stone-800 space-y-2">
-                          <label className="text-xs text-emerald-400 font-bold block">
-                            <i className="fa-solid fa-file-pdf ml-1"></i> رفع ملف PDF النسخة العربية
-                          </label>
-                          <input type="file" accept="application/pdf" onChange={e => handlePdfUpload(e, 'ar')} className="w-full text-xs text-stone-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer" />
-                          {newBook.pdfArName && <p className="text-[11px] text-emerald-400 font-mono truncate">✓ {newBook.pdfArName}</p>}
-                        </div>
+                        {(publishType === 'both' || publishType === 'ar_only') && (
+                          <div className="bg-stone-950 p-4 rounded-xl border border-stone-800 space-y-2">
+                            <label className="text-xs text-emerald-400 font-bold block">
+                              <i className="fa-solid fa-file-pdf ml-1"></i> رفع ملف PDF النسخة العربية
+                            </label>
+                            <input type="file" accept="application/pdf" onChange={e => handlePdfUpload(e, 'ar')} className="w-full text-xs text-stone-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer" />
+                            {newBook.pdfArName && <p className="text-[11px] text-emerald-400 font-mono truncate">✓ {newBook.pdfArName}</p>}
+                          </div>
+                        )}
 
-                        <div className="bg-stone-950 p-4 rounded-xl border border-stone-800 space-y-2">
-                          <label className="text-xs text-emerald-400 font-bold block">
-                            <i className="fa-solid fa-file-pdf ml-1"></i> رفع ملف PDF النسخة الإنجليزية
-                          </label>
-                          <input type="file" accept="application/pdf" onChange={e => handlePdfUpload(e, 'en')} className="w-full text-xs text-stone-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer" />
-                          {newBook.pdfEnName && <p className="text-[11px] text-emerald-400 font-mono truncate">✓ {newBook.pdfEnName}</p>}
-                        </div>
+                        {(publishType === 'both' || publishType === 'en_only') && (
+                          <div className="bg-stone-950 p-4 rounded-xl border border-stone-800 space-y-2">
+                            <label className="text-xs text-emerald-400 font-bold block">
+                              <i className="fa-solid fa-file-pdf ml-1"></i> رفع ملف PDF النسخة الإنجليزية
+                            </label>
+                            <input type="file" accept="application/pdf" onChange={e => handlePdfUpload(e, 'en')} className="w-full text-xs text-stone-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer" />
+                            {newBook.pdfEnName && <p className="text-[11px] text-emerald-400 font-mono truncate">✓ {newBook.pdfEnName}</p>}
+                          </div>
+                        )}
                       </div>
 
-                      {/* الوصف */}
+                      {/* النبذة */}
                       <div>
                         <label className="text-xs text-stone-400 block mb-1">النبذة التشويقية للرواية</label>
                         <textarea rows="3" value={newBook.desc} onChange={e => setNewBook({...newBook, desc: e.target.value})} placeholder="اكتب نبذة غامضة تحبس الأنفاس..." className="w-full bg-stone-950 border border-stone-800 p-2.5 rounded-lg text-sm text-stone-200"></textarea>
                       </div>
 
-                      <button type="submit" className="w-full bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold py-3 rounded-xl transition shadow-lg">
-                        نشر الرواية فوراً في المتجر
+                      <button type="submit" className="w-full bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold py-3.5 rounded-xl transition shadow-lg text-sm">
+                        تأكيد ونشر الرواية فوراً
                       </button>
                     </form>
 
@@ -700,7 +828,7 @@
                       {books.map(b => (
                         <div key={b.id} className="bg-stone-900 p-3.5 rounded-xl border border-stone-800 flex justify-between items-center text-xs">
                           <div className="flex items-center gap-3">
-                            <img src={b.coverData} className="w-8 h-10 object-cover rounded" alt="" />
+                            <img src={b.coverArData || b.coverEnData} className="w-8 h-10 object-cover rounded" alt="" />
                             <div>
                               <p className="font-bold text-stone-200">{b.titleAr || b.titleEn}</p>
                               <span className="text-[10px] text-amber-500">{b.isFree ? 'مجانية' : `$${b.price} USDT`}</span>
