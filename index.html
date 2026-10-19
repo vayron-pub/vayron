@@ -16,19 +16,21 @@
   <!-- خطوط راقية -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Cinzel:wght@500;700;900&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Amiri', serif; }
+    body { font-family: 'Tajawal', sans-serif; }
+    .font-amiri { font-family: 'Amiri', serif; }
     .font-cinzel { font-family: 'Cinzel', serif; }
   </style>
 </head>
-<body class="bg-stone-950 text-stone-100 antialiased selection:bg-amber-900 selection:text-white">
+<body class="bg-[#0c0a09] text-stone-200 antialiased selection:bg-amber-600 selection:text-black">
   <div id="root"></div>
 
   <script type="text/babel">
     const WALLET_ADDRESS = "TJQ5vYmcmfXtp7L4SAtgGnL9onLkDLm6Q6";
     const NETWORK = "TRON (TRC20)";
     const ADMIN_SECRET_KEY = "V@yR0n#9921_X!";
+    const OFFICIAL_EMAIL = "contact@vayron.pub";
 
     const GENRES = [
       { id: 'psychological', labelAr: 'إثارة نفسية', labelEn: 'Psychological' },
@@ -52,13 +54,32 @@
       const [adminInputPass, setAdminInputPass] = React.useState('');
       const [adminError, setAdminError] = React.useState(false);
 
-      // حساب المستخدم
+      // عداد الزيارات
+      const [visitorsCount, setVisitorsCount] = React.useState(() => {
+        const count = localStorage.getItem('vayron_views_count');
+        return count ? parseInt(count, 10) : 1;
+      });
+
+      // قائمة المشتركين المسجلين
+      const [subscribers, setSubscribers] = React.useState(() => {
+        const list = localStorage.getItem('vayron_subscribers_list');
+        return list ? JSON.parse(list) : [];
+      });
+
+      // بيانات الزبون الحالي
       const [user, setUser] = React.useState(() => {
         const saved = localStorage.getItem('vayron_customer_user');
         return saved ? JSON.parse(saved) : null;
       });
+
       const [showUserMenu, setShowUserMenu] = React.useState(false);
       const [showGoogleModal, setShowGoogleModal] = React.useState(false);
+      const [loginReasonMsg, setLoginReasonMsg] = React.useState('');
+      const [pendingAction, setPendingAction] = React.useState(null);
+
+      // حقول تسجيل الدخول
+      const [inputEmail, setInputEmail] = React.useState('');
+      const [inputName, setInputName] = React.useState('');
 
       // الروايات
       const [books, setBooks] = React.useState(() => {
@@ -73,7 +94,6 @@
       const [newBook, setNewBook] = React.useState({
         titleAr: '',
         titleEn: '',
-        author: 'هيئة تحرير VAYRON',
         genre: 'psychological',
         price: '4.99',
         isFree: false,
@@ -82,7 +102,18 @@
         pdfUrl: ''
       });
 
-      // اختصار المفاتيح السري Ctrl + Shift + A
+      // احتساب الزيارات بالجلسة
+      React.useEffect(() => {
+        const sessionCounted = sessionStorage.getItem('vayron_session_counted');
+        if (!sessionCounted) {
+          const newTotal = visitorsCount + 1;
+          setVisitorsCount(newTotal);
+          localStorage.setItem('vayron_views_count', newTotal.toString());
+          sessionStorage.setItem('vayron_session_counted', 'true');
+        }
+      }, []);
+
+      // اختصار المفاتيح السري للإدارة Ctrl + Shift + A
       React.useEffect(() => {
         const handleKeyDown = (e) => {
           if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
@@ -94,7 +125,7 @@
         return () => window.removeEventListener('keydown', handleKeyDown);
       }, []);
 
-      // النقر الثلاثي على الشعار للدخول السري
+      // النقر 3 مرات على اللوغو
       const logoClicksRef = React.useRef(0);
       const handleLogoSecretClick = () => {
         logoClicksRef.current += 1;
@@ -105,15 +136,75 @@
         setTimeout(() => { logoClicksRef.current = 0; }, 1500);
       };
 
-      const handleGoogleLogin = (mockEmail, mockName) => {
-        const loggedUser = {
-          name: mockName || 'قارئ VAYRON',
-          email: mockEmail || 'reader@gmail.com',
-          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${mockName || 'Vayron'}&backgroundColor=d97706`
+      // الضغط على شراء رواية: إلزامي التسجيل إن لم يكن مسجلاً
+      const handleBuyClick = (book) => {
+        if (!user) {
+          setLoginReasonMsg('لتتمكن من إتمام عملية الشراء وحفظ الرواية في حسابك، يرجى تسجيل الدخول بحساب Google أولاً.');
+          setPendingAction(() => () => {
+            setActiveBookForPay(book);
+            setView('checkout');
+          });
+          setShowGoogleModal(true);
+        } else {
+          setActiveBookForPay(book);
+          setView('checkout');
+        }
+      };
+
+      // الضغط على قراءة مجانية: إلزامي التسجيل إن لم يكن مسجلاً
+      const handleFreeReadClick = (book) => {
+        if (!user) {
+          setLoginReasonMsg('للوصول المباشر للروايات والقصص المجانية، يرجى تسجيل الدخول بحساب Google أولاً.');
+          setPendingAction(() => () => {
+            if (book.pdfUrl) {
+              window.open(book.pdfUrl, '_blank');
+            } else {
+              alert('جاري تجهيز الرواية للتحميل قريباً.');
+            }
+          });
+          setShowGoogleModal(true);
+        } else {
+          if (book.pdfUrl) {
+            window.open(book.pdfUrl, '_blank');
+          } else {
+            alert('جاري تجهيز الرواية للتحميل قريباً.');
+          }
+        }
+      };
+
+      // إتمام تسجيل الدخول عبر Google
+      const submitGoogleLogin = (e) => {
+        e.preventDefault();
+        const emailToSave = inputEmail.trim() || 'reader@vayron.pub';
+        const nameToSave = inputName.trim() || emailToSave.split('@')[0];
+
+        const newUser = {
+          name: nameToSave,
+          email: emailToSave,
+          avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${nameToSave}&backgroundColor=b45309`,
+          joinedAt: new Date().toLocaleString('ar-EG')
         };
-        setUser(loggedUser);
-        localStorage.setItem('vayron_customer_user', JSON.stringify(loggedUser));
+
+        setUser(newUser);
+        localStorage.setItem('vayron_customer_user', JSON.stringify(newUser));
+
+        // حفظ في قائمة المشتركين إذا لم يكن موجوداً
+        const exists = subscribers.some(sub => sub.email.toLowerCase() === emailToSave.toLowerCase());
+        if (!exists) {
+          const updatedSubs = [newUser, ...subscribers];
+          setSubscribers(updatedSubs);
+          localStorage.setItem('vayron_subscribers_list', JSON.stringify(updatedSubs));
+        }
+
         setShowGoogleModal(false);
+        setInputEmail('');
+        setInputName('');
+
+        // إكمال الحركة السابقة فوراً (شراء أو قراءة)
+        if (pendingAction) {
+          pendingAction();
+          setPendingAction(null);
+        }
       };
 
       const handleLogout = () => {
@@ -160,7 +251,6 @@
         setNewBook({
           titleAr: '',
           titleEn: '',
-          author: 'هيئة تحرير VAYRON',
           genre: 'psychological',
           price: '4.99',
           isFree: false,
@@ -183,24 +273,25 @@
         : books.filter(b => b.genre === selectedGenre);
 
       return (
-        <div className="min-h-screen flex flex-col justify-between">
-          {/* Header */}
-          <header className="border-b border-stone-800 bg-stone-900/60 backdrop-blur sticky top-0 z-50 px-6 py-4 flex justify-between items-center">
-            <div className="flex items-center gap-3 cursor-pointer select-none" onClick={handleLogoSecretClick} title="VAYRON">
-              <h1 className="text-3xl font-cinzel tracking-widest text-amber-500 font-bold">VAYRON</h1>
-              <span className="text-xs text-stone-500 border-r border-stone-700 pr-3 hidden sm:inline">NOTHING IS WHAT IT SEEMS</span>
+        <div className="min-h-screen flex flex-col justify-between selection:bg-amber-600/30">
+          
+          {/* Header راقٍ ومرتب */}
+          <header className="border-b border-stone-800/80 bg-stone-950/80 backdrop-blur-md sticky top-0 z-50 px-6 py-4 flex justify-between items-center transition">
+            <div className="flex items-center gap-3 cursor-pointer select-none" onClick={handleLogoSecretClick} title="VAYRON Publishing">
+              <h1 className="text-3xl font-cinzel tracking-widest text-amber-500 font-bold hover:text-amber-400 transition">VAYRON</h1>
+              <span className="text-[10px] tracking-widest text-stone-500 border-r border-stone-800 pr-3 hidden md:inline uppercase font-cinzel">NOTHING IS WHAT IT SEEMS</span>
             </div>
             
-            <nav className="flex items-center gap-4 sm:gap-6 text-sm font-medium">
+            <nav className="flex items-center gap-5 sm:gap-7 text-sm font-medium">
               <button 
                 onClick={() => setView('home')} 
-                className={`transition ${view === 'home' ? 'text-amber-400 font-bold' : 'text-stone-300 hover:text-amber-400'}`}
+                className={`transition ${view === 'home' ? 'text-amber-400 font-bold' : 'text-stone-400 hover:text-stone-200'}`}
               >
                 الرئيسية
               </button>
               <button 
                 onClick={() => setView('books')} 
-                className={`transition ${view === 'books' ? 'text-amber-400 font-bold' : 'text-stone-300 hover:text-amber-400'}`}
+                className={`transition ${view === 'books' ? 'text-amber-400 font-bold' : 'text-stone-400 hover:text-stone-200'}`}
               >
                 المكتبة ({books.length})
               </button>
@@ -208,36 +299,36 @@
               {isAdmin && (
                 <button 
                   onClick={() => setView('admin')} 
-                  className="text-amber-400 bg-amber-950/40 border border-amber-600/30 px-3 py-1 rounded text-xs flex items-center gap-1"
+                  className="text-amber-400 bg-amber-950/40 border border-amber-600/40 px-3 py-1 rounded text-xs flex items-center gap-1.5 hover:bg-amber-900/40 transition"
                 >
-                  <i className="fa-solid fa-shield-halved"></i>
-                  <span>الإدارة</span>
+                  <i className="fa-solid fa-shield-halved text-[11px]"></i>
+                  <span>لوحة الإدارة</span>
                 </button>
               )}
 
-              {/* حساب المستخدم عبر Google */}
+              {/* حساب الزبون */}
               {user ? (
                 <div className="relative">
                   <button 
                     onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="flex items-center gap-2 bg-stone-900 border border-stone-700 hover:border-amber-500/50 px-3 py-1.5 rounded-full transition text-xs"
+                    className="flex items-center gap-2 bg-stone-900 border border-stone-800 hover:border-amber-500/50 px-3 py-1.5 rounded-full transition text-xs"
                   >
-                    <img src={user.avatar} alt={user.name} className="w-5 h-5 rounded-full" />
-                    <span className="max-w-[100px] truncate text-stone-200">{user.name}</span>
-                    <i className="fa-solid fa-chevron-down text-[10px] text-stone-500"></i>
+                    <img src={user.avatar} alt={user.name} className="w-5 h-5 rounded-full ring-1 ring-amber-500/50" />
+                    <span className="max-w-[100px] truncate text-stone-200 font-medium">{user.name}</span>
+                    <i className="fa-solid fa-chevron-down text-[9px] text-stone-500"></i>
                   </button>
 
                   {showUserMenu && (
-                    <div className="absolute left-0 mt-2 w-48 bg-stone-900 border border-stone-800 rounded-xl shadow-2xl py-2 z-50 text-right">
+                    <div className="absolute left-0 mt-2 w-52 bg-stone-900 border border-stone-800 rounded-xl shadow-2xl py-2 z-50 text-right">
                       <div className="px-4 py-2 border-b border-stone-800">
                         <p className="text-xs font-bold text-stone-200">{user.name}</p>
-                        <p className="text-[11px] text-stone-500 truncate">{user.email}</p>
+                        <p className="text-[11px] text-stone-500 truncate font-mono">{user.email}</p>
                       </div>
                       <button 
                         onClick={() => { setView('books'); setShowUserMenu(false); }}
                         className="w-full text-right px-4 py-2 text-xs text-stone-300 hover:bg-stone-800 transition"
                       >
-                        <i className="fa-solid fa-book ml-2 text-amber-500"></i> تصفح الروايات
+                        <i className="fa-solid fa-book-bookmark ml-2 text-amber-500"></i> تصفح الروايات
                       </button>
                       <button 
                         onClick={handleLogout}
@@ -250,8 +341,8 @@
                 </div>
               ) : (
                 <button 
-                  onClick={() => setShowGoogleModal(true)}
-                  className="bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-200 text-xs px-3.5 py-1.5 rounded-full flex items-center gap-2 transition"
+                  onClick={() => { setLoginReasonMsg(''); setShowGoogleModal(true); }}
+                  className="bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-300 text-xs px-3.5 py-1.5 rounded-full flex items-center gap-2 transition"
                 >
                   <i className="fa-brands fa-google text-amber-500"></i>
                   <span>دخول عبر Google</span>
@@ -260,47 +351,113 @@
             </nav>
           </header>
 
-          {/* Main Content */}
-          <main className="flex-1 max-w-6xl mx-auto px-6 py-10 w-full">
+          {/* محتوى الصفحات */}
+          <main className="flex-1 max-w-6xl mx-auto px-6 py-12 w-full">
+            
+            {/* الصفحة الرئيسية: واجهة سينمائية مرتبة وشرح اسم VAYRON */}
             {view === 'home' && (
-              <div className="text-center space-y-8 my-10">
-                <span className="text-xs uppercase tracking-widest text-amber-500 border border-amber-500/30 px-4 py-1.5 rounded-full">
-                  دار النشر الرقمي الفاخرة للغموض والإثارة
-                </span>
-                <h2 className="text-4xl md:text-6xl font-bold leading-tight max-w-3xl mx-auto">
-                  حيث لا شيء كما يبدو في عتمة السطور
-                </h2>
-                <p className="text-stone-400 text-lg max-w-2xl mx-auto leading-relaxed">
-                  منصة VAYRON المتخصصة في أدب الغموض، التحقيقات، الرعب، والإثارة النفسية المعاصرة. تجربة قراءة رقمية مشوقة ومباشرة.
-                </p>
-                <div className="pt-4 flex justify-center gap-4">
-                  <button 
-                    onClick={() => { setSelectedGenre('all'); setView('books'); }} 
-                    className="bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold px-8 py-3.5 rounded-lg shadow-lg shadow-amber-900/30 transition text-base"
-                  >
-                    استكشف المكتبة ({books.length})
-                  </button>
-                  {!user && (
+              <div className="space-y-20">
+                {/* Hero Section */}
+                <div className="text-center space-y-6 max-w-3xl mx-auto pt-8">
+                  <div className="inline-flex items-center gap-2 border border-amber-500/20 bg-amber-950/20 px-4 py-1.5 rounded-full">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span className="text-xs uppercase tracking-widest text-amber-400 font-cinzel">DIGITAL PUBLISHING HOUSE</span>
+                  </div>
+
+                  <h2 className="text-4xl sm:text-6xl font-bold leading-tight font-amiri text-stone-100">
+                    حيث لا شيء كما يبدو <br />
+                    <span className="text-amber-500">في عتمة السطور</span>
+                  </h2>
+
+                  <p className="text-stone-400 text-base sm:text-lg leading-relaxed font-light">
+                    المقر الرقمي لأدب الغموض المعاصر، التحقيقات، وحبكات الإثارة النفسية التي تتجاوز المألوف.
+                  </p>
+
+                  <div className="pt-4 flex justify-center gap-4">
                     <button 
-                      onClick={() => setShowGoogleModal(true)}
-                      className="bg-stone-900 hover:bg-stone-800 border border-stone-700 text-stone-300 font-bold px-6 py-3.5 rounded-lg transition text-base flex items-center gap-2"
+                      onClick={() => { setSelectedGenre('all'); setView('books'); }} 
+                      className="bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold px-8 py-3.5 rounded-xl shadow-lg shadow-amber-900/20 transition text-sm flex items-center gap-2"
                     >
-                      <i className="fa-brands fa-google text-amber-400"></i>
-                      <span>انضم كقارئ</span>
+                      <i className="fa-solid fa-book-open"></i>
+                      <span>استكشف المكتبة ({books.length})</span>
                     </button>
-                  )}
+                    {!user && (
+                      <button 
+                        onClick={() => { setLoginReasonMsg(''); setShowGoogleModal(true); }}
+                        className="bg-stone-900 hover:bg-stone-800 border border-stone-800 text-stone-300 font-bold px-6 py-3.5 rounded-xl transition text-sm flex items-center gap-2"
+                      >
+                        <i className="fa-brands fa-google text-amber-400"></i>
+                        <span>انضم كقارئ</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* قسم خاص: شرح فلسفة واسم VAYRON بطريقة فخمة */}
+                <div className="bg-gradient-to-b from-stone-900/60 to-stone-950/90 border border-stone-800/80 rounded-3xl p-8 sm:p-12 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-64 h-64 bg-amber-600/5 rounded-full blur-3xl -z-10"></div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                    <div className="space-y-2 border-l-0 md:border-l border-stone-800 md:pl-8">
+                      <span className="text-amber-500 font-cinzel text-xs tracking-widest block uppercase">THE IDENTITY</span>
+                      <h3 className="text-3xl font-bold font-cinzel text-stone-100">VAYRON</h3>
+                      <p className="text-xs text-stone-500 font-mono">ما وراء الظلال • دار النشر الرقمي</p>
+                    </div>
+
+                    <div className="md:col-span-2 space-y-4 text-stone-300 leading-relaxed font-light text-sm sm:text-base">
+                      <p>
+                        <strong className="text-amber-400 font-bold">فايرون (VAYRON)</strong> ليس مجرد علامة أدبية، بل هو الحد الفاصل بين الحقيقة الراسخة والوهم الخفي. تم تأسيس الدار لتكون المنصة الأولى المتخصصة في تقديم أدب نفسي مكثف، حيث الغموض لا يقتصر على حل لغز جريمة، بل يغوص عميقاً في تعقيدات النفس البشرية وتناقضاتها.
+                      </p>
+                      <p className="text-stone-400 text-xs sm:text-sm">
+                        كل عمل يصدر تحت مظلة <span className="text-stone-200 font-semibold">VAYRON</span> يلتزم بميثاق سردي صارم: حبكات مشوقة، تصاعد درامي يحبس الأنفاس، ونهايات لا يمكن التنبؤ بها، مع تجربة اقتناء رقمية عصرية مباشرة وسلسة.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* مميزات التجربة في VAYRON */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  <div className="bg-stone-900/40 border border-stone-800/70 p-6 rounded-2xl space-y-3">
+                    <div className="w-10 h-10 bg-amber-950/40 rounded-lg flex items-center justify-center text-amber-400 text-lg">
+                      <i className="fa-solid fa-brain"></i>
+                    </div>
+                    <h4 className="text-base font-bold text-stone-200">إثارة نفسية معمقة</h4>
+                    <p className="text-xs text-stone-400 leading-relaxed">روايات وقصص كُتبت بعناية لتأخذك إلى أروقة العقل الباطن ومتاهات الشك.</p>
+                  </div>
+
+                  <div className="bg-stone-900/40 border border-stone-800/70 p-6 rounded-2xl space-y-3">
+                    <div className="w-10 h-10 bg-amber-950/40 rounded-lg flex items-center justify-center text-amber-400 text-lg">
+                      <i className="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h4 className="text-base font-bold text-stone-200">دفع مشفر مباشر (USDT)</h4>
+                    <p className="text-xs text-stone-400 leading-relaxed">اقتناء فوري ومستقل عبر شبكة TRON TRC20 بأعلى معايير الخصوصية.</p>
+                  </div>
+
+                  <div className="bg-stone-900/40 border border-stone-800/70 p-6 rounded-2xl space-y-3">
+                    <div className="w-10 h-10 bg-amber-950/40 rounded-lg flex items-center justify-center text-amber-400 text-lg">
+                      <i className="fa-solid fa-book-journal-whills"></i>
+                    </div>
+                    <h4 className="text-base font-bold text-stone-200">إصدارات مجانية وحصرية</h4>
+                    <p className="text-xs text-stone-400 leading-relaxed">فصول ترويجية وروايات كاملة تُتاح للقراء المسجلين مجاناً ضمن الأقسام.</p>
+                  </div>
                 </div>
               </div>
             )}
 
+            {/* صفحة المكتبة: عرض الروايات مع تفعيل الإلزام بالتسجيل */}
             {view === 'books' && (
               <div className="space-y-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-stone-800 pb-4">
-                  <h3 className="text-2xl font-bold text-amber-400">مكتبة الروايات</h3>
-                  <div className="flex gap-1.5 text-xs flex-wrap items-center">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-stone-800 pb-5">
+                  <div>
+                    <h3 className="text-2xl font-bold text-stone-100 font-amiri">مكتبة الروايات المنشورة</h3>
+                    <p className="text-xs text-stone-500 mt-1">اختر عملك الأدبي المفضل وابدأ القراءة</p>
+                  </div>
+                  
+                  {/* أزرار الأقسام الأدبية */}
+                  <div className="flex gap-2 text-xs flex-wrap items-center">
                     <button 
                       onClick={() => setSelectedGenre('all')} 
-                      className={`px-3 py-1.5 rounded transition ${selectedGenre === 'all' ? 'bg-amber-600 text-stone-950 font-bold' : 'bg-stone-900 text-stone-400 hover:text-stone-200'}`}
+                      className={`px-3.5 py-1.5 rounded-lg transition ${selectedGenre === 'all' ? 'bg-amber-600 text-stone-950 font-bold' : 'bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800'}`}
                     >
                       الكل
                     </button>
@@ -308,7 +465,7 @@
                       <button 
                         key={g.id}
                         onClick={() => setSelectedGenre(g.id)} 
-                        className={`px-3 py-1.5 rounded transition ${selectedGenre === g.id ? 'bg-amber-600 text-stone-950 font-bold' : 'bg-stone-900 text-stone-400 hover:text-stone-200'}`}
+                        className={`px-3.5 py-1.5 rounded-lg transition ${selectedGenre === g.id ? 'bg-amber-600 text-stone-950 font-bold' : 'bg-stone-900 text-stone-400 hover:text-stone-200 border border-stone-800'}`}
                       >
                         {g.labelAr}
                       </button>
@@ -317,20 +474,20 @@
                 </div>
 
                 {filteredBooks.length === 0 ? (
-                  <div className="bg-stone-900/40 border border-stone-800/80 rounded-2xl p-12 text-center space-y-4">
-                    <i className="fa-solid fa-feather-pointed text-4xl text-amber-500/60 mb-2"></i>
-                    <h4 className="text-xl font-bold">لا توجد روايات معروضة في هذا القسم حالياً</h4>
-                    <p className="text-stone-400 max-w-md mx-auto text-sm">ترقبوا أولى إصدارات الدار الحصرية قريباً.</p>
+                  <div className="bg-stone-900/30 border border-stone-800/80 rounded-3xl p-16 text-center space-y-4">
+                    <i className="fa-solid fa-feather-pointed text-4xl text-amber-500/50 mb-2"></i>
+                    <h4 className="text-xl font-bold text-stone-200">لا توجد أعمال معروضة في هذا القسم حالياً</h4>
+                    <p className="text-stone-500 max-w-md mx-auto text-xs">ترقبوا أولى إصدارات الدار الحصرية قريباً، أو تفضل بزيارة باقي الأقسام.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredBooks.map(book => (
-                      <div key={book.id} className="bg-stone-900 border border-stone-800 rounded-xl overflow-hidden flex flex-col justify-between group hover:border-amber-500/40 transition">
+                      <div key={book.id} className="bg-stone-900/70 border border-stone-800 rounded-2xl overflow-hidden flex flex-col justify-between group hover:border-amber-500/40 hover:shadow-2xl transition duration-300">
                         <div>
-                          <div className="relative">
-                            <img src={book.coverUrl} alt={book.titleAr} className="w-full h-60 object-cover" />
+                          <div className="relative overflow-hidden">
+                            <img src={book.coverUrl} alt={book.titleAr} className="w-full h-64 object-cover group-hover:scale-105 transition duration-500" />
                             {book.isFree && (
-                              <span className="absolute top-3 left-3 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded shadow-lg uppercase tracking-wider">
+                              <span className="absolute top-3 left-3 bg-emerald-600/90 backdrop-blur-sm text-white text-[10px] font-bold px-3 py-1 rounded-md shadow-lg uppercase tracking-wider">
                                 مجاناً / Free
                               </span>
                             )}
@@ -339,37 +496,37 @@
                             <span className="text-[10px] bg-amber-950/60 text-amber-400 border border-amber-800/40 px-2.5 py-0.5 rounded-full font-sans">
                               {getGenreLabel(book.genre)}
                             </span>
-                            <h4 className="text-xl font-bold text-stone-100 group-hover:text-amber-400 transition">{book.titleAr}</h4>
-                            <p className="text-xs text-stone-400 font-cinzel">{book.titleEn}</p>
-                            <p className="text-stone-400 text-sm line-clamp-3 mt-2 leading-relaxed">{book.desc}</p>
+                            <h4 className="text-xl font-bold text-stone-100 group-hover:text-amber-400 transition font-amiri">{book.titleAr}</h4>
+                            <p className="text-xs text-stone-500 font-cinzel">{book.titleEn}</p>
+                            <p className="text-stone-400 text-xs line-clamp-3 mt-2 leading-relaxed font-light">{book.desc}</p>
                           </div>
                         </div>
+
                         <div className="p-5 pt-0 border-t border-stone-800/60 mt-4 flex justify-between items-center">
                           {book.isFree ? (
-                            <span className="text-base font-bold text-emerald-400 flex items-center gap-1">
-                              <i className="fa-solid fa-check-circle text-xs"></i>
+                            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                              <i className="fa-solid fa-circle-check"></i>
                               <span>إصدار مجاني</span>
                             </span>
                           ) : (
-                            <span className="text-lg font-bold text-amber-400">${book.price} USDT</span>
+                            <span className="text-base font-bold text-amber-400 font-mono">${book.price} USDT</span>
                           )}
 
+                          {/* النقر مشروط بتسجيل الدخول أولاً */}
                           {book.isFree ? (
-                            <a 
-                              href={book.pdfUrl || '#'} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded transition flex items-center gap-1.5"
+                            <button 
+                              onClick={() => handleFreeReadClick(book)}
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 shadow"
                             >
-                              <i className="fa-solid fa-book-open"></i>
+                              <i className="fa-solid fa-book-open text-[11px]"></i>
                               <span>قراءة مجانية</span>
-                            </a>
+                            </button>
                           ) : (
                             <button 
-                              onClick={() => { setActiveBookForPay(book); setView('checkout'); }}
-                              className="bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold text-xs px-4 py-2.5 rounded transition flex items-center gap-1.5"
+                              onClick={() => handleBuyClick(book)}
+                              className="bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold text-xs px-4 py-2 rounded-lg transition flex items-center gap-1.5 shadow"
                             >
-                              <i className="fa-solid fa-cart-shopping"></i>
+                              <i className="fa-solid fa-cart-shopping text-[11px]"></i>
                               <span>شراء الرواية</span>
                             </button>
                           )}
@@ -381,288 +538,5 @@
               </div>
             )}
 
-            {/* صفحة الدفع */}
+            {/* نافذة الدفع: بعد تسجيل الدخول حصراً */}
             {view === 'checkout' && activeBookForPay && (
-              <div className="bg-stone-900 border border-stone-800 p-8 rounded-2xl max-w-lg mx-auto shadow-2xl text-center space-y-6">
-                <div>
-                  <span className="text-xs text-amber-500 uppercase tracking-widest border border-amber-500/20 px-3 py-1 rounded-full">فاتورة طلب رواية</span>
-                  <h3 className="text-2xl font-bold text-stone-100 mt-3">{activeBookForPay.titleAr}</h3>
-                  <p className="text-sm text-stone-400 mt-1 font-mono">
-                    المبلغ المطلوب: <span className="text-amber-400 font-bold text-lg">${activeBookForPay.price} USDT</span>
-                  </p>
-                </div>
-
-                <div className="border-t border-stone-800 pt-4 text-xs text-stone-400">
-                  يرجى تحويل المبلغ بدقة عبر شبكة <span className="text-stone-200 font-bold">{NETWORK}</span> إلى المحفظة الرسمية:
-                </div>
-                
-                <div className="bg-white p-3 rounded-xl inline-block shadow-inner mx-auto">
-                  <img 
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${WALLET_ADDRESS}`} 
-                    alt="USDT TRC20 QR Code" 
-                    className="w-48 h-48"
-                  />
-                </div>
-
-                <div className="bg-stone-950 border border-stone-800 p-4 rounded-lg text-right space-y-2">
-                  <div className="flex justify-between items-center text-xs text-stone-400">
-                    <span>عنوان المحفظة (USDT):</span>
-                    <span className="text-amber-500 font-semibold">{NETWORK}</span>
-                  </div>
-                  <div className="font-mono text-xs break-all text-amber-200 select-all p-2.5 bg-stone-900 rounded border border-stone-800">
-                    {WALLET_ADDRESS}
-                  </div>
-                  <button 
-                    onClick={copyAddress}
-                    className="w-full mt-2 bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold text-xs py-2.5 rounded transition flex items-center justify-center gap-2"
-                  >
-                    <i className="fa-regular fa-copy"></i>
-                    {copied ? "تم النسخ بنجاح!" : "نسخ عنوان المحفظة"}
-                  </button>
-                </div>
-
-                <button 
-                  onClick={() => setView('books')} 
-                  className="text-xs text-stone-400 hover:text-stone-200 underline block mx-auto pt-2"
-                >
-                  إلغاء والعودة إلى المكتبة
-                </button>
-              </div>
-            )}
-
-            {/* لوحة تحكم الإدارة الكاملة */}
-            {view === 'admin' && isAdmin && (
-              <div className="space-y-10">
-                <div className="flex justify-between items-center border-b border-stone-800 pb-4">
-                  <div>
-                    <h3 className="text-2xl font-bold text-amber-400 flex items-center gap-2">
-                      <i className="fa-solid fa-lock"></i>
-                      <span>لوحة الإدارة المشفرة</span>
-                    </h3>
-                    <p className="text-xs text-stone-400">إدارة إصدارات الدار الحصرية ونشر الروايات</p>
-                  </div>
-                  <button onClick={() => { setIsAdmin(false); setView('home'); }} className="text-xs text-rose-400 hover:underline">
-                    إغلاق الجلسة وتأمين اللوحة
-                  </button>
-                </div>
-
-                {/* نموذج إضافة رواية */}
-                <form onSubmit={handleAddBook} className="bg-stone-900 border border-stone-800 p-6 rounded-2xl space-y-4">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-lg font-bold text-stone-200">إضافة رواية جديدة</h4>
-                    <label className="flex items-center gap-2 cursor-pointer bg-stone-950 px-3 py-1.5 rounded-lg border border-stone-800 select-none">
-                      <input 
-                        type="checkbox" 
-                        checked={newBook.isFree}
-                        onChange={e => setNewBook({...newBook, isFree: e.target.checked})}
-                        className="w-4 h-4 accent-emerald-500 cursor-pointer"
-                      />
-                      <span className={`text-xs font-bold ${newBook.isFree ? 'text-emerald-400' : 'text-stone-400'}`}>
-                        إصدار مجاني (Free)
-                      </span>
-                    </label>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs text-stone-400 block mb-1">عنوان الرواية (بالعربي)</label>
-                      <input 
-                        required
-                        type="text" 
-                        value={newBook.titleAr} 
-                        onChange={e => setNewBook({...newBook, titleAr: e.target.value})}
-                        placeholder="مثال: الغرفة رقم 4" 
-                        className="w-full bg-stone-950 border border-stone-800 px-3 py-2 rounded text-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs text-stone-400 block mb-1">العنوان بالإنجليزية (English Title)</label>
-                      <input 
-                        type="text" 
-                        value={newBook.titleEn} 
-                        onChange={e => setNewBook({...newBook, titleEn: e.target.value})}
-                        placeholder="e.g. Room No. 4" 
-                        className="w-full bg-stone-950 border border-stone-800 px-3 py-2 rounded text-sm text-left"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="text-xs text-stone-400 block mb-1">التصنيف / القسم</label>
-                      <select 
-                        value={newBook.genre} 
-                        onChange={e => setNewBook({...newBook, genre: e.target.value})}
-                        className="w-full bg-stone-950 border border-stone-800 px-3 py-2 rounded text-sm text-stone-200"
-                      >
-                        {GENRES.map(g => (
-                          <option key={g.id} value={g.id}>{g.labelAr} ({g.labelEn})</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-stone-400 block mb-1">السعر (بالدولار USDT)</label>
-                      <input 
-                        disabled={newBook.isFree}
-                        type="number" 
-                        step="0.5"
-                        value={newBook.isFree ? '0.00' : newBook.price} 
-                        onChange={e => setNewBook({...newBook, price: e.target.value})}
-                        className={`w-full bg-stone-950 border border-stone-800 px-3 py-2 rounded text-sm ${newBook.isFree ? 'text-emerald-500 opacity-60 cursor-not-allowed' : ''}`}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-xs text-stone-400 block mb-1">رابط صورة الغلاف</label>
-                      <input 
-                        type="text" 
-                        value={newBook.coverUrl} 
-                        onChange={e => setNewBook({...newBook, coverUrl: e.target.value})}
-                        placeholder="رابط مباشر لصورة الغلاف" 
-                        className="w-full bg-stone-950 border border-stone-800 px-3 py-2 rounded text-sm"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-stone-400 block mb-1">رابط ملف الرواية (PDF أو قراءة مباشرة)</label>
-                    <input 
-                      type="url" 
-                      value={newBook.pdfUrl} 
-                      onChange={e => setNewBook({...newBook, pdfUrl: e.target.value})}
-                      placeholder="https://example.com/novel.pdf أو رابط Google Drive" 
-                      className="w-full bg-stone-950 border border-stone-800 px-3 py-2 rounded text-sm text-left"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-stone-400 block mb-1">النبذة التشويقية (الخلاصة)</label>
-                    <textarea 
-                      rows="3" 
-                      value={newBook.desc} 
-                      onChange={e => setNewBook({...newBook, desc: e.target.value})}
-                      placeholder="اكتب نبذة غامضة تحبس الأنفاس وتشجع على القراءة..." 
-                      className="w-full bg-stone-950 border border-stone-800 px-3 py-2 rounded text-sm"
-                    ></textarea>
-                  </div>
-
-                  <button type="submit" className="w-full bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold py-3 rounded-lg transition">
-                    نشر الرواية فوراً في المكتبة
-                  </button>
-                </form>
-
-                {/* قائمة الروايات المنشورة */}
-                <div className="space-y-4">
-                  <h4 className="text-lg font-bold text-stone-300">الروايات المنشورة حالياً ({books.length})</h4>
-                  {books.length === 0 ? (
-                    <p className="text-xs text-stone-500">لم تقم بنشر أي رواية بعد.</p>
-                  ) : (
-                    <div className="space-y-2">
-                      {books.map(b => (
-                        <div key={b.id} className="bg-stone-900 border border-stone-800 p-4 rounded-lg flex justify-between items-center">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-stone-200">{b.titleAr}</span>
-                            <span className="text-xs text-amber-500 font-mono">[{getGenreLabel(b.genre)}]</span>
-                            {b.isFree ? (
-                              <span className="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800/40 px-2 py-0.5 rounded">مجانية</span>
-                            ) : (
-                              <span className="text-xs text-stone-500 font-mono">(${b.price} USDT)</span>
-                            )}
-                          </div>
-                          <button onClick={() => handleDeleteBook(b.id)} className="text-rose-500 text-xs hover:underline">
-                            حذف الرواية
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </main>
-
-          {/* نافذة تسجيل الدخول عبر Google للزبائن */}
-          {showGoogleModal && (
-            <div className="fixed inset-0 bg-stone-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-stone-900 border border-stone-800 w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl space-y-6">
-                <div className="w-12 h-12 bg-stone-800 rounded-full flex items-center justify-center mx-auto text-amber-500 text-xl">
-                  <i className="fa-brands fa-google"></i>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-stone-100">تسجيل الدخول إلى VAYRON</h3>
-                  <p className="text-xs text-stone-400 mt-1">سجّل بحساب Google لحفظ قراءاتك ورواياتك</p>
-                </div>
-                
-                <div className="space-y-3">
-                  <button 
-                    onClick={() => handleGoogleLogin('reader@gmail.com', 'قارئ متميز')}
-                    className="w-full bg-stone-950 hover:bg-stone-800 border border-stone-700 py-2.5 px-4 rounded-xl flex items-center justify-center gap-3 text-xs text-stone-200 font-bold transition"
-                  >
-                    <i className="fa-brands fa-google text-rose-500 text-sm"></i>
-                    <span>متابعة بحساب Google</span>
-                  </button>
-                </div>
-
-                <button 
-                  onClick={() => setShowGoogleModal(false)}
-                  className="text-xs text-stone-500 hover:text-stone-300 transition"
-                >
-                  إلغاء
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* النافذة السرية لدخول الإدارة (لا تظهر إلا بالاختصار) */}
-          {showSecretModal && (
-            <div className="fixed inset-0 bg-stone-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-              <div className="bg-stone-900 border border-stone-700 w-full max-w-md rounded-2xl p-8 text-center shadow-2xl space-y-5">
-                <div className="w-12 h-12 bg-amber-950/50 border border-amber-600/30 rounded-full flex items-center justify-center mx-auto text-amber-500 text-xl">
-                  <i className="fa-solid fa-key"></i>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-stone-100 font-cinzel tracking-wider">RESTRICTED ACCESS</h3>
-                  <p className="text-xs text-stone-400 mt-1">بوابة الإدارة والتأليف المشفرة لدار VAYRON</p>
-                </div>
-
-                <form onSubmit={verifyAdminPassword} className="space-y-4">
-                  <input 
-                    type="password" 
-                    autoFocus
-                    placeholder="أدخل مفتاح الأمان السري..." 
-                    value={adminInputPass}
-                    onChange={(e) => setAdminInputPass(e.target.value)}
-                    className="w-full bg-stone-950 border border-stone-700 px-4 py-2.5 rounded-lg text-sm text-center text-amber-400 focus:border-amber-500 focus:outline-none font-mono"
-                  />
-                  {adminError && <p className="text-xs text-rose-500">رمز الدخول غير صالح!</p>}
-                  
-                  <div className="flex gap-2">
-                    <button type="submit" className="flex-1 bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold py-2 rounded-lg text-xs transition">
-                      فك التشفير والدخول
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => { setShowSecretModal(false); setAdminError(false); }}
-                      className="bg-stone-800 hover:bg-stone-700 text-stone-300 py-2 px-4 rounded-lg text-xs transition"
-                    >
-                      إلغاء
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* Footer نظيف تماماً وخالٍ من أي روابط إدارة */}
-          <footer className="border-t border-stone-900 py-6 px-6 text-center text-xs text-stone-500">
-            <p>© 2026 VAYRON Publishing House. جميع الحقوق محفوظة.</p>
-          </footer>
-        </div>
-      );
-    }
-
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-  </script>
-</body>
-</html>
