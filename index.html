@@ -29,7 +29,7 @@
     const WALLET_ADDRESS = "TJQ5vYmcmfXtp7L4SAtgGnL9onLkDLm6Q6";
     const NETWORK = "TRON (TRC20)";
 
-    // دليل التصنيفات الكامل
+    // الأقسام الأدبية المعتمدة
     const GENRES = [
       { id: 'psychological', labelAr: 'إثارة نفسية', labelEn: 'Psychological' },
       { id: 'mystery', labelAr: 'غموض وتحقيقات', labelEn: 'Mystery' },
@@ -57,7 +57,7 @@
         return saved ? JSON.parse(saved) : [];
       });
 
-      const [selectedFilter, setSelectedFilter] = React.useState('all');
+      const [selectedGenre, setSelectedGenre] = React.useState('all');
       const [activeBookForPay, setActiveBookForPay] = React.useState(null);
 
       // نموذج إضافة رواية
@@ -127,12 +127,10 @@
         }
       };
 
-      // منطق الفلترة
-      const filteredBooks = books.filter(book => {
-        if (selectedFilter === 'all') return true;
-        if (selectedFilter === 'free') return book.isFree === true;
-        return book.genre === selectedFilter;
-      });
+      // فلترة الكتب حسب القسم فقط (الروايات المجانية تظهر داخل قسمها تلقائياً)
+      const filteredBooks = selectedGenre === 'all' 
+        ? books 
+        : books.filter(b => b.genre === selectedGenre);
 
       return (
         <div className="min-h-screen flex flex-col justify-between">
@@ -168,7 +166,7 @@
 
           {/* Main Content */}
           <main className="flex-1 max-w-6xl mx-auto px-6 py-10 w-full">
-            {/* الصفحة الرئيسية */}
+            {/* الصفحة الرئيسية: نقية وبسيطة بدون أي إشارة للمجاني أو وسائل الدفع */}
             {view === 'home' && (
               <div className="text-center space-y-8 my-10">
                 <span className="text-xs uppercase tracking-widest text-amber-500 border border-amber-500/30 px-4 py-1.5 rounded-full">
@@ -178,52 +176,38 @@
                   حيث لا شيء كما يبدو في عتمة السطور
                 </h2>
                 <p className="text-stone-400 text-lg max-w-2xl mx-auto leading-relaxed">
-                  منصة VAYRON المتخصصة في أدب الغموض، التحقيقات، الرعب، والإثارة النفسية المعاصرة. إصدارات حصرية وقراءات مجانية مشوقة.
+                  منصة VAYRON المتخصصة في أدب الغموض، التحقيقات، الرعب، والإثارة النفسية المعاصرة. تجربة قراءة رقمية مشوقة ومباشرة.
                 </p>
-                <div className="flex justify-center gap-4 pt-4">
+                <div className="pt-4">
                   <button 
-                    onClick={() => { setSelectedFilter('all'); setView('books'); }} 
+                    onClick={() => { setSelectedGenre('all'); setView('books'); }} 
                     className="bg-amber-600 hover:bg-amber-500 text-stone-950 font-bold px-8 py-3.5 rounded-lg shadow-lg shadow-amber-900/30 transition text-base"
                   >
                     استكشف المكتبة ({books.length})
-                  </button>
-                  <button 
-                    onClick={() => { setSelectedFilter('free'); setView('books'); }} 
-                    className="bg-emerald-950/40 border border-emerald-600/40 hover:bg-emerald-900/50 text-emerald-400 font-bold px-6 py-3.5 rounded-lg transition text-base flex items-center gap-2"
-                  >
-                    <i className="fa-solid fa-gift"></i>
-                    <span>الروايات المجانية</span>
                   </button>
                 </div>
               </div>
             )}
 
-            {/* صفحة المكتبة مع الفلترة */}
+            {/* صفحة المكتبة: التصنيفات الأدبية فقط */}
             {view === 'books' && (
               <div className="space-y-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-stone-800 pb-4">
-                  <h3 className="text-2xl font-bold text-amber-400">مكتبة الروايات المنشورة</h3>
+                  <h3 className="text-2xl font-bold text-amber-400">مكتبة الروايات</h3>
                   
-                  {/* أزرار الفلترة والتصنيفات بما فيها المجاني */}
+                  {/* أزرار الأقسام الأدبية فقط */}
                   <div className="flex gap-1.5 text-xs flex-wrap items-center">
                     <button 
-                      onClick={() => setSelectedFilter('all')} 
-                      className={`px-3 py-1.5 rounded transition ${selectedFilter === 'all' ? 'bg-amber-600 text-stone-950 font-bold' : 'bg-stone-900 text-stone-400 hover:text-stone-200'}`}
+                      onClick={() => setSelectedGenre('all')} 
+                      className={`px-3 py-1.5 rounded transition ${selectedGenre === 'all' ? 'bg-amber-600 text-stone-950 font-bold' : 'bg-stone-900 text-stone-400 hover:text-stone-200'}`}
                     >
                       الكل
-                    </button>
-                    <button 
-                      onClick={() => setSelectedFilter('free')} 
-                      className={`px-3 py-1.5 rounded transition flex items-center gap-1.5 ${selectedFilter === 'free' ? 'bg-emerald-600 text-white font-bold' : 'bg-emerald-950/30 text-emerald-400 border border-emerald-800/40 hover:bg-emerald-900/40'}`}
-                    >
-                      <i className="fa-solid fa-gift text-[11px]"></i>
-                      <span>مجانية</span>
                     </button>
                     {GENRES.map(g => (
                       <button 
                         key={g.id}
-                        onClick={() => setSelectedFilter(g.id)} 
-                        className={`px-3 py-1.5 rounded transition ${selectedFilter === g.id ? 'bg-amber-600 text-stone-950 font-bold' : 'bg-stone-900 text-stone-400 hover:text-stone-200'}`}
+                        onClick={() => setSelectedGenre(g.id)} 
+                        className={`px-3 py-1.5 rounded transition ${selectedGenre === g.id ? 'bg-amber-600 text-stone-950 font-bold' : 'bg-stone-900 text-stone-400 hover:text-stone-200'}`}
                       >
                         {g.labelAr}
                       </button>
@@ -265,13 +249,13 @@
                           {book.isFree ? (
                             <span className="text-base font-bold text-emerald-400 flex items-center gap-1">
                               <i className="fa-solid fa-check-circle text-xs"></i>
-                              <span>مجانية بالكامل</span>
+                              <span>إصدار مجاني</span>
                             </span>
                           ) : (
                             <span className="text-lg font-bold text-amber-400">${book.price} USDT</span>
                           )}
 
-                          {/* زر التفاعل: إذا مجاني يفتح الرابط فوراً، وإذا مدفوع يفتح الدفع */}
+                          {/* زر التفاعل: إذا مجاني يفتح الرواية، وإذا مدفوع يفتح الدفع */}
                           {book.isFree ? (
                             <a 
                               href={book.pdfUrl || '#'} 
@@ -377,7 +361,7 @@
                 <div className="flex justify-between items-center border-b border-stone-800 pb-4">
                   <div>
                     <h3 className="text-2xl font-bold text-amber-400">لوحة تحكم دار النشر</h3>
-                    <p className="text-xs text-stone-400">إضافة وتصنيف الروايات (المجانية والمدفوعة)</p>
+                    <p className="text-xs text-stone-400">إضافة وتصنيف الروايات (المجانية والمدفوعة داخل الأقسام)</p>
                   </div>
                   <button onClick={() => { setIsAdmin(false); setView('home'); }} className="text-xs text-rose-400 hover:underline">
                     تسجيل الخروج
@@ -389,7 +373,7 @@
                   <div className="flex justify-between items-center">
                     <h4 className="text-lg font-bold text-stone-200">إضافة رواية جديدة</h4>
                     
-                    {/* خيار الرواية المجانية */}
+                    {/* خيار الرواية المجانية داخل القسم */}
                     <label className="flex items-center gap-2 cursor-pointer bg-stone-950 px-3 py-1.5 rounded-lg border border-stone-800 select-none">
                       <input 
                         type="checkbox" 
@@ -398,7 +382,7 @@
                         className="w-4 h-4 accent-emerald-500 cursor-pointer"
                       />
                       <span className={`text-xs font-bold ${newBook.isFree ? 'text-emerald-400' : 'text-stone-400'}`}>
-                        رواية مجانية (Free)
+                        إصدار مجاني (Free)
                       </span>
                     </label>
                   </div>
@@ -465,11 +449,11 @@
                     </div>
                   </div>
 
-                  {/* رابط ملف الرواية للقراءة أو التحميل */}
+                  {/* رابط ملف الرواية */}
                   <div>
                     <label className="text-xs text-stone-400 block mb-1">
                       رابط ملف الرواية (PDF أو قراءة مباشرة) 
-                      {newBook.isFree && <span className="text-emerald-400 mr-1">*(سيفتح للقارئ فوراً عند الضغط على قراءة مجانية)*</span>}
+                      {newBook.isFree && <span className="text-emerald-400 mr-1">*(يفتح مباشرة للقارئ دون دفع)*</span>}
                     </label>
                     <input 
                       type="url" 
